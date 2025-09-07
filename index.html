@@ -15,7 +15,7 @@
       font-display: block;
     }
     html, body { margin:0; height:100%; background:#fff; overflow:hidden; }
-    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; }
     .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
     .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
     .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
@@ -26,7 +26,9 @@
     .menu-button { position:fixed; top:20px; left:20px; font-size:50px; color:#000; cursor:pointer; z-index:200; }
     .scoreboard-container { position:fixed; top:20px; right:20px; text-align:right; z-index:100; }
     .scoreboard, .high-score { font-size:50px; }
-    .hs-number { display:inline-block; }
+    .hs-number { display:inline-block; color:#000; transform:scale(1); }
+    .hs-number.gold { color:#FFD700; }
+    .hs-number.pop { transform:scale(1.35); }
     .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
     .try-again.show { opacity:1; pointer-events:auto; }
     .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
@@ -53,7 +55,7 @@
 
   <div class="mode-menu" id="mode-menu">
     <div class="mode-options">
-      <div class="mode-option available" id="mode-hs" data-sfx="click" onclick="selectMode('hs')">
+      <div class="mode-option available" id="mode-hs" onclick="selectMode('hs')">
         <span>hs mode</span>
       </div>
       <div class="mode-option coming-soon" id="mode-bid">
@@ -67,18 +69,18 @@
     </div>
   </div>
 
-  <div class="menu-button" id="menu-button" data-sfx="click" onclick="returnToMenu()">menu</div>
+  <div class="menu-button" id="menu-button" onclick="returnToMenu()">menu</div>
 
   <div class="scoreboard-container">
     <div class="high-score" id="high-score"><span class="hs-label">hs:</span> <span class="hs-number">0</span></div>
     <div class="scoreboard" id="score">0</div>
   </div>
 
-  <div class="try-again" id="try-again" data-sfx="click" onclick="resetPage()">try again</div>
+  <div class="try-again" id="try-again" onclick="resetPage()">try again</div>
   <div class="overlay" id="overlay" onclick="resetPage()"></div>
 
   <div class="image-container" id="image-container">
-    <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static" data-sfx="click">
+    <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static">
     <div class="side left-side" onclick="handleClick('left')"></div>
     <div class="side right-side" onclick="handleClick('right')"></div>
     <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame">
@@ -95,63 +97,35 @@
     let score = 0, highScore = 0, isAnimating = false, gameStarted = false;
     let activeTimers = [], animRaf = null, sceneToken = 0;
 
-    const SFX = {
-      click: new Audio('./audio/sfx_click.wav'),
-      score: new Audio('./audio/sfx_score.wav'),
-      lose:  new Audio('./audio/sfx_lose.wav')
-    };
-    Object.values(SFX).forEach(a => { a.preload = 'auto'; a.volume = 0.95; });
-
-    function unlockAudioOnce() {
-      const audios = Object.values(SFX);
-      const vols = audios.map(a => a.volume);
-      audios.forEach(a => { a.volume = 0; a.muted = true; });
-      Promise.all(audios.map(a => a.play().catch(()=>{}))).then(()=>{
-        audios.forEach(a => { a.pause(); a.currentTime = 0; a.muted = false; });
-        audios.forEach((a,i)=> a.volume = vols[i]);
-      });
-      document.removeEventListener('pointerdown', unlockAudioOnce);
-      document.removeEventListener('keydown', unlockAudioOnce);
-    }
-    document.addEventListener('pointerdown', unlockAudioOnce, { once:true });
-    document.addEventListener('keydown', unlockAudioOnce, { once:true });
-
-    document.addEventListener('pointerdown', (e) => {
-      const el = e.target.closest('[data-sfx="click"]');
-      if (!el) return;
-      if (el.classList.contains('coming-soon') || el.closest('.coming-soon')) return;
-      if (el.id === 'static') {
-        const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
-        if (!staticVisible) return;
-      }
-      playSfx('click');
-    }, true);
-
-    function playSfx(name) {
-      const base = SFX[name];
-      if (!base) return;
-      try {
-        const a = base.cloneNode();
-        a.volume = base.volume;
-        a.play().catch(()=>{});
-      } catch(e) {
-        base.currentTime = 0;
-        base.play().catch(()=>{});
-      }
-    }
+    const hsNumberEl = document.querySelector('.hs-number');
+    const scoreEl = document.getElementById('score');
 
     function loadHighScore(){
       const s = localStorage.getItem('doors_high_score');
-      if(s!==null){ highScore = parseInt(s); document.querySelector('.hs-number').textContent = highScore; }
+      if(s!==null){
+        highScore = parseInt(s);
+        hsNumberEl.textContent = highScore;
+      }
     }
     function saveHighScore(){ localStorage.setItem('doors_high_score', highScore.toString()); }
+
+    function celebrateHighScore(){
+      hsNumberEl.classList.remove('gold','pop');
+      void hsNumberEl.offsetWidth;
+      hsNumberEl.classList.add('gold','pop');
+      setTimeout(()=>{ hsNumberEl.classList.remove('gold','pop'); }, 220);
+    }
 
     function updateScore(v){
       const prev = score;
       score = v;
-      document.getElementById('score').textContent = score;
-      if(score>highScore){ highScore = score; document.querySelector('.hs-number').textContent = highScore; saveHighScore(); }
-      if (v > prev) playSfx('score');
+      scoreEl.textContent = score;
+      if(score > highScore){
+        highScore = score;
+        hsNumberEl.textContent = highScore;
+        saveHighScore();
+        celebrateHighScore();
+      }
     }
 
     function setT(fn, ms){ const id = setTimeout(fn, ms); activeTimers.push(id); return id; }
@@ -161,10 +135,10 @@
     function handleClick(side){
       if(!gameStarted || isAnimating) return;
       const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
-      if(staticVisible) playSfx('click');
+      if(!staticVisible) return;
       isAnimating = true;
       document.getElementById('static').style.display = 'none';
-      document.getElementById('score').style.display = 'block';
+      scoreEl.style.display = 'block';
       const outcome = Math.floor(Math.random()*2);
       if(side==='left'){
         if(outcome===1){
@@ -189,7 +163,6 @@
         if(i<frames.length){
           const f = frames[i];
           f.style.display='block';
-          if ((f.id === 'negative-left-frame' || f.id === 'negative-right-frame')) playSfx('lose');
           if(i<frames.length-1){
             setT(()=>{ if(myToken!==sceneToken) return; f.style.display='none'; i++; animRaf=requestAnimationFrame(step); }, Array.isArray(intervals)?intervals[i]:intervals);
           }else{
@@ -203,7 +176,7 @@
     function resetToStatic(){
       document.querySelectorAll('.frame').forEach(f=>f.style.display='none');
       document.getElementById('static').style.display='block';
-      document.getElementById('score').style.display='block';
+      scoreEl.style.display='block';
       document.getElementById('high-score').style.display='block';
     }
 
@@ -301,11 +274,10 @@
         './images/2/logo.png'
       ];
       preloadImagesWithProgress(imagesToPreload, ()=>{}, ()=>{
-        logoScreen.setAttribute('data-sfx','click');
         logoScreen.style.cursor = 'pointer';
         logoScreen.onclick = showModeMenu;
         logoScreen.setAttribute('tabindex','0');
-        logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { playSfx('click'); showModeMenu(); } };
+        logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { showModeMenu(); } };
       });
     }
 
