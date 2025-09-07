@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DOORS</title>
+  <link rel="icon" type="image/png" href="images/2/logo.png">
+  <link rel="preload" href="./fonts/Tiny5-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Tiny5';
+      src: url('./fonts/Tiny5-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+    html, body { margin:0; height:100%; background:#fff; overflow:hidden; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; }
+    .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
+    .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
+    .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
+    .mode-options { display:flex; flex-direction:column; align-items:center; gap:40px; }
+    .mode-option { font-size:60px; color:#000; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .mode-option.coming-soon { color:#888; cursor:not-allowed; }
+    .coming-soon-text { font-size:20px; color:#aaa; line-height:1; }
+    .menu-button { position:fixed; top:20px; left:20px; font-size:50px; color:#000; cursor:pointer; z-index:200; }
+    .scoreboard-container { position:fixed; top:20px; right:20px; text-align:right; z-index:100; }
+    .scoreboard, .high-score { font-size:50px; }
+    .hs-number { display:inline-block; }
+    .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
+    .try-again.show { opacity:1; pointer-events:auto; }
+    .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
+    .overlay.show { opacity:1; pointer-events:auto; }
+    .image-container { position:relative; width:1000px; height:1000px; }
+    .static-image { width:100%; height:auto; display:block; }
+    .side { position:absolute; top:0; width:50%; height:100%; }
+    .left-side { left:0; } .right-side { right:0; }
+    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; }
+    @media (max-width:768px) {
+      .image-container { width:500px; height:500px; }
+      .scoreboard, .high-score { font-size:30px; }
+      .menu-button { font-size:30px; }
+      .try-again { font-size:30px; }
+      .mode-option { font-size:40px; }
+      .mode-options { gap:25px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="center-screen" id="logo-screen">
+    <img src="./images/2/logo.png" alt="DOORS" class="logo" id="logo">
+  </div>
+
+  <div class="mode-menu" id="mode-menu">
+    <div class="mode-options">
+      <div class="mode-option available" id="mode-hs" data-sfx="click" onclick="selectMode('hs')">
+        <span>hs mode</span>
+      </div>
+      <div class="mode-option coming-soon" id="mode-bid">
+        <span>bid mode</span>
+        <span class="coming-soon-text">coming soon</span>
+      </div>
+      <div class="mode-option coming-soon" id="mode-pvp">
+        <span>pvp mode</span>
+        <span class="coming-soon-text">coming soon</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-button" id="menu-button" data-sfx="click" onclick="returnToMenu()">menu</div>
+
+  <div class="scoreboard-container">
+    <div class="high-score" id="high-score"><span class="hs-label">hs:</span> <span class="hs-number">0</span></div>
+    <div class="scoreboard" id="score">0</div>
+  </div>
+
+  <div class="try-again" id="try-again" data-sfx="click" onclick="resetPage()">try again</div>
+  <div class="overlay" id="overlay" onclick="resetPage()"></div>
+
+  <div class="image-container" id="image-container">
+    <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static" data-sfx="click">
+    <div class="side left-side" onclick="handleClick('left')"></div>
+    <div class="side right-side" onclick="handleClick('right')"></div>
+    <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame">
+    <img src="./images/2/2_left_2.png" id="left-frame-2" class="frame">
+    <img src="./images/2/2_left_3.png" id="left-frame-3" class="frame">
+    <img src="./images/2/2_negative_left_4_alt.png" id="negative-left-frame" class="frame">
+    <img src="./images/2/2_right_1.png" id="right-frame-1" class="frame">
+    <img src="./images/2/2_right_2.png" id="right-frame-2" class="frame">
+    <img src="./images/2/2_right_3.png" id="right-frame-3" class="frame">
+    <img src="./images/2/2_negative_right_4_alt.png" id="negative-right-frame" class="frame">
+  </div>
+
+  <script>
+    let score = 0, highScore = 0, isAnimating = false, gameStarted = false;
+    let activeTimers = [], animRaf = null, sceneToken = 0;
+
+    const SFX = {
+      click: new Audio('./audio/sfx_click.wav'),
+      score: new Audio('./audio/sfx_score.wav'),
+      lose:  new Audio('./audio/sfx_lose.wav')
+    };
+    Object.values(SFX).forEach(a => { a.preload = 'auto'; a.volume = 0.95; });
+
+    function unlockAudioOnce() {
+      const audios = Object.values(SFX);
+      const vols = audios.map(a => a.volume);
+      audios.forEach(a => { a.volume = 0; a.muted = true; });
+      Promise.all(audios.map(a => a.play().catch(()=>{}))).then(()=>{
+        audios.forEach(a => { a.pause(); a.currentTime = 0; a.muted = false; });
+        audios.forEach((a,i)=> a.volume = vols[i]);
+      });
+      document.removeEventListener('pointerdown', unlockAudioOnce);
+      document.removeEventListener('keydown', unlockAudioOnce);
+    }
+    document.addEventListener('pointerdown', unlockAudioOnce, { once:true });
+    document.addEventListener('keydown', unlockAudioOnce, { once:true });
+
+    document.addEventListener('pointerdown', (e) => {
+      const el = e.target.closest('[data-sfx="click"]');
+      if (!el) return;
+      if (el.classList.contains('coming-soon') || el.closest('.coming-soon')) return;
+      if (el.id === 'static') {
+        const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
+        if (!staticVisible) return;
+      }
+      playSfx('click');
+    }, true);
+
+    function playSfx(name) {
+      const base = SFX[name];
+      if (!base) return;
+      try {
+        const a = base.cloneNode();
+        a.volume = base.volume;
+        a.play().catch(()=>{});
+      } catch(e) {
+        base.currentTime = 0;
+        base.play().catch(()=>{});
+      }
+    }
+
+    function loadHighScore(){
+      const s = localStorage.getItem('doors_high_score');
+      if(s!==null){ highScore = parseInt(s); document.querySelector('.hs-number').textContent = highScore; }
+    }
+    function saveHighScore(){ localStorage.setItem('doors_high_score', highScore.toString()); }
+
+    function updateScore(v){
+      const prev = score;
+      score = v;
+      document.getElementById('score').textContent = score;
+      if(score>highScore){ highScore = score; document.querySelector('.hs-number').textContent = highScore; saveHighScore(); }
+      if (v > prev) playSfx('score');
+    }
+
+    function setT(fn, ms){ const id = setTimeout(fn, ms); activeTimers.push(id); return id; }
+    function clearTimers(){ activeTimers.forEach(clearTimeout); activeTimers=[]; if(animRaf){ cancelAnimationFrame(animRaf); animRaf=null; } }
+    function cancelAnimations(){ sceneToken++; clearTimers(); document.querySelectorAll('.frame').forEach(f=>f.style.display='none'); isAnimating=false; }
+
+    function handleClick(side){
+      if(!gameStarted || isAnimating) return;
+      const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
+      if(staticVisible) playSfx('click');
+      isAnimating = true;
+      document.getElementById('static').style.display = 'none';
+      document.getElementById('score').style.display = 'block';
+      const outcome = Math.floor(Math.random()*2);
+      if(side==='left'){
+        if(outcome===1){
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+        }else{
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
+        }
+      }else{
+        if(outcome===1){
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+        }else{
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
+        }
+      }
+    }
+
+    function showFrames(ids, intervals, cb){
+      const myToken = ++sceneToken;
+      let i=0; const frames = ids.map(id=>document.getElementById(id));
+      function step(){
+        if(myToken!==sceneToken) return;
+        if(i<frames.length){
+          const f = frames[i];
+          f.style.display='block';
+          if ((f.id === 'negative-left-frame' || f.id === 'negative-right-frame')) playSfx('lose');
+          if(i<frames.length-1){
+            setT(()=>{ if(myToken!==sceneToken) return; f.style.display='none'; i++; animRaf=requestAnimationFrame(step); }, Array.isArray(intervals)?intervals[i]:intervals);
+          }else{
+            setT(()=>{ if(myToken!==sceneToken) return; i++; cb(); }, Array.isArray(intervals)?intervals[i]:intervals);
+          }
+        }
+      }
+      step();
+    }
+
+    function resetToStatic(){
+      document.querySelectorAll('.frame').forEach(f=>f.style.display='none');
+      document.getElementById('static').style.display='block';
+      document.getElementById('score').style.display='block';
+      document.getElementById('high-score').style.display='block';
+    }
+
+    function showTryAgainText(){
+      if(!gameStarted) return;
+      document.getElementById('try-again').classList.add('show');
+      document.getElementById('overlay').classList.add('show');
+    }
+
+    function resetPage(){
+      document.getElementById('try-again').classList.remove('show');
+      document.getElementById('overlay').classList.remove('show');
+      updateScore(0);
+      resetToStatic();
+    }
+
+    function initLogoScreen(){
+      const logoScreen = document.getElementById('logo-screen');
+      const modeMenu = document.getElementById('mode-menu');
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      gameContainer.style.display='none';
+      scoreboard.style.display='none';
+      menuButton.style.display='none';
+      modeMenu.style.display='none';
+      logoScreen.style.display='grid';
+    }
+
+    function showModeMenu(){
+      document.getElementById('logo-screen').style.display='none';
+      document.getElementById('mode-menu').style.display='flex';
+    }
+
+    function selectMode(mode){ if(mode==='hs') startGame(); }
+
+    function startGame(){
+      const modeMenu = document.getElementById('mode-menu');
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      cancelAnimations();
+      gameStarted=false; isAnimating=false;
+      updateScore(0); resetToStatic();
+      document.getElementById('try-again').classList.remove('show');
+      document.getElementById('overlay').classList.remove('show');
+      modeMenu.style.display='none';
+      gameContainer.style.display='block';
+      scoreboard.style.display='block';
+      menuButton.style.display='block';
+      gameStarted=true;
+    }
+
+    function returnToMenu(){
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      const modeMenu = document.getElementById('mode-menu');
+      const tryAgain = document.getElementById('try-again');
+      const overlay = document.getElementById('overlay');
+      cancelAnimations();
+      gameStarted=false; updateScore(0);
+      gameContainer.style.display='none';
+      scoreboard.style.display='none';
+      menuButton.style.display='none';
+      tryAgain.classList.remove('show');
+      overlay.classList.remove('show');
+      modeMenu.style.display='flex';
+    }
+
+    function preloadImagesWithProgress(srcs, onProgress, onDone){
+      let loaded=0; const total=srcs.length;
+      if(total===0){ onProgress(100); onDone(); return; }
+      srcs.forEach(src=>{
+        const img=new Image();
+        img.onload=img.onerror=()=>{ loaded++; onProgress(Math.round(loaded/total*100)); if(loaded>=total) onDone(); };
+        img.src=src;
+      });
+    }
+
+    function initPreloadAndActivateLogo(){
+      const logoScreen = document.getElementById('logo-screen');
+      const imagesToPreload = [
+        './images/2/2_static_image.png',
+        './images/2/2_left_1.png',
+        './images/2/2_left_2.png',
+        './images/2/2_left_3.png',
+        './images/2/2_left_4.png',
+        './images/2/2_negative_left_4_alt.png',
+        './images/2/2_right_1.png',
+        './images/2/2_right_2.png',
+        './images/2/2_right_3.png',
+        './images/2/2_right_4.png',
+        './images/2/2_negative_right_4_alt.png',
+        './images/2/logo.png'
+      ];
+      preloadImagesWithProgress(imagesToPreload, ()=>{}, ()=>{
+        logoScreen.setAttribute('data-sfx','click');
+        logoScreen.style.cursor = 'pointer';
+        logoScreen.onclick = showModeMenu;
+        logoScreen.setAttribute('tabindex','0');
+        logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { playSfx('click'); showModeMenu(); } };
+      });
+    }
+
+    initPreloadAndActivateLogo();
+    loadHighScore();
+    initLogoScreen();
+  </script>
+</body>
+</html>
