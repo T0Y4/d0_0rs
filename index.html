@@ -40,7 +40,7 @@
     .static-image { width:100%; height:auto; display:block; will-change: transform; }
     .side { position:absolute; top:0; width:50%; height:100%; will-change: transform; }
     .left-side { left:0; } .right-side { right:0; }
-    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; will-change: transform; transform: translateZ(0); }
+    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; will-change: transform; transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
     @media (max-width:768px) {
       .image-container { width:500px; height:500px; }
       .scoreboard, .high-score { font-size:30px; }
@@ -86,14 +86,14 @@
     <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static">
     <div class="side left-side" onclick="handleClick('left')"></div>
     <div class="side right-side" onclick="handleClick('right')"></div>
-    <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame">
-    <img src="./images/2/2_left_2.png" id="left-frame-2" class="frame">
-    <img src="./images/2/2_left_3.png" id="left-frame-3" class="frame">
-    <img src="./images/2/2_negative_left_4_alt.png" id="negative-left-frame" class="frame">
-    <img src="./images/2/2_right_1.png" id="right-frame-1" class="frame">
-    <img src="./images/2/2_right_2.png" id="right-frame-2" class="frame">
-    <img src="./images/2/2_right_3.png" id="right-frame-3" class="frame">
-    <img src="./images/2/2_negative_right_4_alt.png" id="negative-right-frame" class="frame">
+    <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame" loading="eager">
+    <img src="./images/2/2_left_2.png" id="left-frame-2" class="frame" loading="eager">
+    <img src="./images/2/2_left_3.png" id="left-frame-3" class="frame" loading="eager">
+    <img src="./images/2/2_negative_left_4_alt.png" id="negative-left-frame" class="frame" loading="eager">
+    <img src="./images/2/2_right_1.png" id="right-frame-1" class="frame" loading="eager">
+    <img src="./images/2/2_right_2.png" id="right-frame-2" class="frame" loading="eager">
+    <img src="./images/2/2_right_3.png" id="right-frame-3" class="frame" loading="eager">
+    <img src="./images/2/2_negative_right_4_alt.png" id="negative-right-frame" class="frame" loading="eager">
   </div>
 
   <script>
@@ -196,16 +196,18 @@
     function showFrames(ids, intervals, cb){
       const myToken = ++sceneToken;
       let i=0; const frames = ids.map(id=>document.getElementById(id));
+      
       function step(){
         if(myToken!==sceneToken) return;
         if(i<frames.length){
           const f = frames[i];
-          f.style.display='block';
+          f.style.display = 'block';
           f.style.transform = 'translateZ(0)'; // Force hardware acceleration
+          
           if(i<frames.length-1){
             setT(()=>{ 
               if(myToken!==sceneToken) return; 
-              f.style.display='none'; 
+              f.style.display = 'none'; 
               i++; 
               animRaf=requestAnimationFrame(step); 
             }, Array.isArray(intervals)?intervals[i]:intervals);
