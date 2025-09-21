@@ -2,7 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
   <title>DOORS</title>
   <link rel="icon" type="image/png" href="images/2/logo.png">
   <link rel="preload" href="./fonts/Tiny5-Regular.ttf" as="font" type="font/ttf" crossorigin>
@@ -14,8 +17,8 @@
       font-style: normal;
       font-display: block;
     }
-    html, body { margin:0; height:100%; background:#fff; overflow:hidden; }
-    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; }
+    html, body { margin:0; height:100%; background:#fff; overflow:hidden; -webkit-overflow-scrolling: touch; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; -webkit-tap-highlight-color: transparent; }
     .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
     .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
     .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
@@ -28,16 +31,16 @@
     .scoreboard, .high-score { font-size:50px; }
     .hs-number { display:inline-block; color:#000; transform:scale(1); }
     .hs-number.gold { color:#FFD700; }
-    .hs-number.pop { transform:scale(1.35); }
+    .hs-number.pop { transform:scale(1.35) translateZ(0); }
     .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
     .try-again.show { opacity:1; pointer-events:auto; }
     .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
     .overlay.show { opacity:1; pointer-events:auto; }
-    .image-container { position:relative; width:1000px; height:1000px; }
-    .static-image { width:100%; height:auto; display:block; }
-    .side { position:absolute; top:0; width:50%; height:100%; }
+    .image-container { position:relative; width:1000px; height:1000px; will-change: transform; }
+    .static-image { width:100%; height:auto; display:block; will-change: transform; }
+    .side { position:absolute; top:0; width:50%; height:100%; will-change: transform; }
     .left-side { left:0; } .right-side { right:0; }
-    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; }
+    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; will-change: transform; transform: translateZ(0); }
     @media (max-width:768px) {
       .image-container { width:500px; height:500px; }
       .scoreboard, .high-score { font-size:30px; }
@@ -137,20 +140,55 @@
       const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
       if(!staticVisible) return;
       isAnimating = true;
+      
+      // Prevent multiple rapid touches
+      document.querySelectorAll('.side').forEach(side => {
+        side.style.pointerEvents = 'none';
+      });
       document.getElementById('static').style.display = 'none';
       scoreEl.style.display = 'block';
       const outcome = Math.floor(Math.random()*2);
       if(side==='left'){
         if(outcome===1){
-          showFrames(['left-frame-1','left-frame-2','left-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],300,()=>{ 
+            resetToStatic(); 
+            updateScore(score+1); 
+            isAnimating=false;
+            // Re-enable touch events
+            document.querySelectorAll('.side').forEach(side => {
+              side.style.pointerEvents = 'auto';
+            });
+          });
         }else{
-          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[300,300,600],()=>{ 
+            showTryAgainText(); 
+            isAnimating=false;
+            // Re-enable touch events
+            document.querySelectorAll('.side').forEach(side => {
+              side.style.pointerEvents = 'auto';
+            });
+          });
         }
       }else{
         if(outcome===1){
-          showFrames(['right-frame-1','right-frame-2','right-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],300,()=>{ 
+            resetToStatic(); 
+            updateScore(score+1); 
+            isAnimating=false;
+            // Re-enable touch events
+            document.querySelectorAll('.side').forEach(side => {
+              side.style.pointerEvents = 'auto';
+            });
+          });
         }else{
-          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[300,300,600],()=>{ 
+            showTryAgainText(); 
+            isAnimating=false;
+            // Re-enable touch events
+            document.querySelectorAll('.side').forEach(side => {
+              side.style.pointerEvents = 'auto';
+            });
+          });
         }
       }
     }
@@ -163,10 +201,20 @@
         if(i<frames.length){
           const f = frames[i];
           f.style.display='block';
+          f.style.transform = 'translateZ(0)'; // Force hardware acceleration
           if(i<frames.length-1){
-            setT(()=>{ if(myToken!==sceneToken) return; f.style.display='none'; i++; animRaf=requestAnimationFrame(step); }, Array.isArray(intervals)?intervals[i]:intervals);
+            setT(()=>{ 
+              if(myToken!==sceneToken) return; 
+              f.style.display='none'; 
+              i++; 
+              animRaf=requestAnimationFrame(step); 
+            }, Array.isArray(intervals)?intervals[i]:intervals);
           }else{
-            setT(()=>{ if(myToken!==sceneToken) return; i++; cb(); }, Array.isArray(intervals)?intervals[i]:intervals);
+            setT(()=>{ 
+              if(myToken!==sceneToken) return; 
+              i++; 
+              cb(); 
+            }, Array.isArray(intervals)?intervals[i]:intervals);
           }
         }
       }
@@ -191,6 +239,10 @@
       document.getElementById('overlay').classList.remove('show');
       updateScore(0);
       resetToStatic();
+      // Re-enable touch events
+      document.querySelectorAll('.side').forEach(side => {
+        side.style.pointerEvents = 'auto';
+      });
     }
 
     function initLogoScreen(){
