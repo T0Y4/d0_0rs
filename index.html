@@ -1,194 +1,321 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Простая смена изображений</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #fff;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        
-        .image-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .image-slide {
-            position: absolute;
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            opacity: 0;
-            transition: none;
-            image-rendering: pixelated;
-            image-rendering: -moz-crisp-edges;
-            image-rendering: crisp-edges;
-        }
-        
-        .image-slide.active {
-            opacity: 1;
-        }
-        
-        .debug-info {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 1000;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DOORS</title>
+  <link rel="icon" type="image/png" href="images/2/logo.png">
+  <link rel="preload" href="./fonts/Tiny5-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Tiny5';
+      src: url('./fonts/Tiny5-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+    html, body { margin:0; height:100%; background:#fff; overflow:hidden; touch-action:manipulation; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; }
+    .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
+    .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
+    .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
+    .mode-options { display:flex; flex-direction:column; align-items:center; gap:40px; }
+    .mode-option { font-size:60px; color:#000; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .mode-option.coming-soon { color:#888; cursor:not-allowed; }
+    .coming-soon-text { font-size:20px; color:#aaa; line-height:1; }
+    .menu-button { position:fixed; top:20px; left:20px; font-size:50px; color:#000; cursor:pointer; z-index:200; }
+    .scoreboard-container { position:fixed; top:20px; right:20px; text-align:right; z-index:100; }
+    .scoreboard, .high-score { font-size:50px; }
+    .hs-number { display:inline-block; color:#000; transform:scale(1); }
+    .hs-number.gold { color:#FFD700; }
+    .hs-number.pop { transform:scale(1.35); }
+    .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
+    .try-again.show { opacity:1; pointer-events:auto; }
+    .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
+    .overlay.show { opacity:1; pointer-events:auto; }
+    .image-container { position:relative; width:1000px; height:1000px; }
+    .static-image { width:100%; height:auto; display:block; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
+    .side { position:absolute; top:0; width:50%; height:100%; }
+    .left-side { left:0; } .right-side { right:0; }
+    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
+    @media (max-width:768px) {
+      .image-container { width:500px; height:500px; }
+      .scoreboard, .high-score { font-size:30px; }
+      .menu-button { font-size:30px; }
+      .try-again { font-size:30px; }
+      .mode-option { font-size:40px; }
+      .mode-options { gap:25px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="debug-info" id="debugInfo">Загрузка...</div>
-    
-    <div class="image-container">
-        <img src="images/2/2_static_image.png" alt="Статичное изображение" class="image-slide active" id="image0">
-        <img src="images/2/2_left_1.png" alt="Левое изображение 1" class="image-slide" id="image1">
-        <img src="images/2/2_left_2.png" alt="Левое изображение 2" class="image-slide" id="image2">
-        <img src="images/2/2_left_3.png" alt="Левое изображение 3" class="image-slide" id="image3">
-    </div>
+  <div class="center-screen" id="logo-screen">
+    <img src="./images/2/logo.png" alt="DOORS" class="logo" id="logo">
+  </div>
 
-    <script>
-        const images = [
-            'images/2/2_static_image.png',
-            'images/2/2_left_1.png', 
-            'images/2/2_left_2.png',
-            'images/2/2_left_3.png'
-        ];
-        
-        let currentImageIndex = 0;
-        const displayDuration = 250; // 250мс
-        let isPlaying = false;
-        let animationId = null;
-        let playCount = 0;
-        let loadedImages = 0;
-        
-        function updateDebugInfo(message) {
-            document.getElementById('debugInfo').textContent = message;
+  <div class="mode-menu" id="mode-menu">
+    <div class="mode-options">
+      <div class="mode-option available" id="mode-hs" onclick="selectMode('hs')">
+        <span>hs mode</span>
+      </div>
+      <div class="mode-option coming-soon" id="mode-bid">
+        <span>bid mode</span>
+        <span class="coming-soon-text">coming soon</span>
+      </div>
+      <div class="mode-option coming-soon" id="mode-pvp">
+        <span>pvp mode</span>
+        <span class="coming-soon-text">coming soon</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-button" id="menu-button" onclick="returnToMenu()">menu</div>
+
+  <div class="scoreboard-container">
+    <div class="high-score" id="high-score"><span class="hs-label">hs:</span> <span class="hs-number">0</span></div>
+    <div class="scoreboard" id="score">0</div>
+  </div>
+
+  <div class="try-again" id="try-again" onclick="resetPage()">try again</div>
+  <div class="overlay" id="overlay" onclick="resetPage()"></div>
+
+  <div class="image-container" id="image-container">
+    <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static">
+    <div class="side left-side" onclick="handleClick('left')"></div>
+    <div class="side right-side" onclick="handleClick('right')"></div>
+    <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame">
+    <img src="./images/2/2_left_2.png" id="left-frame-2" class="frame">
+    <img src="./images/2/2_left_3.png" id="left-frame-3" class="frame">
+    <img src="./images/2/2_negative_left_4_alt.png" id="negative-left-frame" class="frame">
+    <img src="./images/2/2_right_1.png" id="right-frame-1" class="frame">
+    <img src="./images/2/2_right_2.png" id="right-frame-2" class="frame">
+    <img src="./images/2/2_right_3.png" id="right-frame-3" class="frame">
+    <img src="./images/2/2_negative_right_4_alt.png" id="negative-right-frame" class="frame">
+  </div>
+
+  <script>
+    let score = 0, highScore = 0, isAnimating = false, gameStarted = false;
+    let activeTimers = [], sceneToken = 0;
+
+    const hsNumberEl = document.querySelector('.hs-number');
+    const scoreEl = document.getElementById('score');
+
+    function loadHighScore(){
+      const s = localStorage.getItem('doors_high_score');
+      if(s!==null){
+        highScore = parseInt(s);
+        hsNumberEl.textContent = highScore;
+      }
+    }
+    function saveHighScore(){ localStorage.setItem('doors_high_score', highScore.toString()); }
+
+    function celebrateHighScore(){
+      hsNumberEl.classList.remove('gold','pop');
+      void hsNumberEl.offsetWidth;
+      hsNumberEl.classList.add('gold','pop');
+      setTimeout(()=>{ hsNumberEl.classList.remove('gold','pop'); }, 220);
+    }
+
+    function updateScore(v){
+      const prev = score;
+      score = v;
+      scoreEl.textContent = score;
+      if(score > highScore){
+        highScore = score;
+        hsNumberEl.textContent = highScore;
+        saveHighScore();
+        celebrateHighScore();
+      }
+    }
+
+    function setT(fn, ms){ 
+      const id = setTimeout(fn, ms); 
+      activeTimers.push(id); 
+      return id; 
+    }
+    
+    function cancelAnimations(){ 
+      sceneToken++; 
+      activeTimers.forEach(clearTimeout); 
+      activeTimers = []; 
+      document.querySelectorAll('.frame').forEach(f=>f.style.display='none'); 
+      isAnimating=false; 
+    }
+
+    function handleClick(side){
+      if(!gameStarted || isAnimating) return;
+      const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
+      if(!staticVisible) return;
+      isAnimating = true;
+      document.getElementById('static').style.display = 'none';
+      scoreEl.style.display = 'block';
+      const outcome = Math.floor(Math.random()*2);
+      if(side==='left'){
+        if(outcome===1){
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],250,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+        }else{
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[250,250,500],()=>{ showTryAgainText(); isAnimating=false; });
         }
-        
-        function showImage(index) {
-            // Скрыть все изображения
-            document.querySelectorAll('.image-slide').forEach(img => {
-                img.classList.remove('active');
-            });
-            
-            // Показать текущее изображение
-            const currentImg = document.getElementById(`image${index}`);
-            currentImg.classList.add('active');
-            
-            currentImageIndex = index;
-            updateDebugInfo(`Показываем изображение ${index + 1}/4`);
+      }else{
+        if(outcome===1){
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],250,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+        }else{
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[250,250,500],()=>{ showTryAgainText(); isAnimating=false; });
         }
-        
-        function nextImage() {
-            currentImageIndex = (currentImageIndex + 1) % images.length;
-            showImage(currentImageIndex);
-            
-            // Если прошли полный цикл (4 картинки), останавливаем
-            if (currentImageIndex === 0) {
-                playCount++;
-                if (playCount >= 1) {
-                    stopSlideshow();
-                    playCount = 0;
-                }
-            }
+      }
+    }
+
+    function showFrames(ids, intervals, cb){
+      const myToken = ++sceneToken;
+      let i=0; 
+      const frames = ids.map(id=>document.getElementById(id));
+      
+      function step(){
+        if(myToken !== sceneToken) return;
+        if(i < frames.length){
+          const f = frames[i];
+          f.style.display = 'block';
+          if(i < frames.length - 1){
+            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
+            setT(() => {
+              if(myToken !== sceneToken) return;
+              f.style.display = 'none';
+              i++;
+              step();
+            }, interval);
+          } else {
+            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
+            setT(() => {
+              if(myToken !== sceneToken) return;
+              cb();
+            }, interval);
+          }
         }
-        
-        function startSlideshow() {
-            if (!isPlaying) {
-                isPlaying = true;
-                playCount = 0;
-                currentImageIndex = 0;
-                showImage(currentImageIndex);
-                updateDebugInfo('Анимация запущена');
-                
-                // Используем requestAnimationFrame для плавной анимации
-                let lastTime = 0;
-                function animate(currentTime) {
-                    if (currentTime - lastTime >= displayDuration) {
-                        nextImage();
-                        lastTime = currentTime;
-                    }
-                    
-                    if (isPlaying) {
-                        animationId = requestAnimationFrame(animate);
-                    }
-                }
-                
-                animationId = requestAnimationFrame(animate);
-            }
-        }
-        
-        function stopSlideshow() {
-            if (isPlaying) {
-                isPlaying = false;
-                if (animationId) {
-                    cancelAnimationFrame(animationId);
-                    animationId = null;
-                }
-                updateDebugInfo('Анимация остановлена');
-            }
-        }
-        
-        // Предзагрузка изображений
-        function preloadImages() {
-            updateDebugInfo('Загрузка изображений...');
-            
-            images.forEach((src, index) => {
-                const img = new Image();
-                img.onload = function() {
-                    loadedImages++;
-                    updateDebugInfo(`Загружено: ${loadedImages}/${images.length}`);
-                    
-                    if (loadedImages === images.length) {
-                        updateDebugInfo('Все изображения загружены!');
-                        setTimeout(() => {
-                            document.getElementById('debugInfo').style.display = 'none';
-                        }, 2000);
-                    }
-                };
-                img.onerror = function() {
-                    updateDebugInfo(`Ошибка загрузки: ${src}`);
-                };
-                img.src = src;
-            });
-        }
-        
-        // Обработчик нажатий по экрану
-        document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            if (!isPlaying) {
-                startSlideshow();
-            }
-        });
-        
-        // Обработчик кликов мышью (для тестирования на компьютере)
-        document.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (!isPlaying) {
-                startSlideshow();
-            }
-        });
-        
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
-            preloadImages();
-            showImage(0);
-        });
-    </script>
+      }
+      step();
+    }
+
+    function resetToStatic(){
+      document.querySelectorAll('.frame').forEach(f=>f.style.display='none');
+      document.getElementById('static').style.display='block';
+      scoreEl.style.display='block';
+      document.getElementById('high-score').style.display='block';
+    }
+
+    function showTryAgainText(){
+      if(!gameStarted) return;
+      document.getElementById('try-again').classList.add('show');
+      document.getElementById('overlay').classList.add('show');
+    }
+
+    function resetPage(){
+      document.getElementById('try-again').classList.remove('show');
+      document.getElementById('overlay').classList.remove('show');
+      updateScore(0);
+      resetToStatic();
+    }
+
+    function initLogoScreen(){
+      const logoScreen = document.getElementById('logo-screen');
+      const modeMenu = document.getElementById('mode-menu');
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      gameContainer.style.display='none';
+      scoreboard.style.display='none';
+      menuButton.style.display='none';
+      modeMenu.style.display='none';
+      logoScreen.style.display='grid';
+    }
+
+    function showModeMenu(){
+      document.getElementById('logo-screen').style.display='none';
+      document.getElementById('mode-menu').style.display='flex';
+    }
+
+    function selectMode(mode){ if(mode==='hs') startGame(); }
+
+    function startGame(){
+      const modeMenu = document.getElementById('mode-menu');
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      cancelAnimations();
+      gameStarted=false; isAnimating=false;
+      updateScore(0); resetToStatic();
+      document.getElementById('try-again').classList.remove('show');
+      document.getElementById('overlay').classList.remove('show');
+      modeMenu.style.display='none';
+      gameContainer.style.display='block';
+      scoreboard.style.display='block';
+      menuButton.style.display='block';
+      gameStarted=true;
+    }
+
+    function returnToMenu(){
+      const gameContainer = document.getElementById('image-container');
+      const scoreboard = document.querySelector('.scoreboard-container');
+      const menuButton = document.getElementById('menu-button');
+      const modeMenu = document.getElementById('mode-menu');
+      const tryAgain = document.getElementById('try-again');
+      const overlay = document.getElementById('overlay');
+      cancelAnimations();
+      gameStarted=false; updateScore(0);
+      gameContainer.style.display='none';
+      scoreboard.style.display='none';
+      menuButton.style.display='none';
+      tryAgain.classList.remove('show');
+      overlay.classList.remove('show');
+      modeMenu.style.display='flex';
+    }
+
+    function preloadImagesWithProgress(srcs, onProgress, onDone){
+      let loaded=0; const total=srcs.length;
+      if(total===0){ onProgress(100); onDone(); return; }
+      srcs.forEach(src=>{
+        const img=new Image();
+        img.onload=()=>{ 
+          loaded++; 
+          onProgress(Math.round(loaded/total*100)); 
+          if(loaded>=total) onDone(); 
+        };
+        img.onerror=()=>{ 
+          console.error('Ошибка загрузки изображения:', src);
+          loaded++; 
+          onProgress(Math.round(loaded/total*100)); 
+          if(loaded>=total) onDone(); 
+        };
+        img.src=src;
+      });
+    }
+
+    function initPreloadAndActivateLogo(){
+      const logoScreen = document.getElementById('logo-screen');
+      const imagesToPreload = [
+        './images/2/2_static_image.png',
+        './images/2/2_left_1.png',
+        './images/2/2_left_2.png',
+        './images/2/2_left_3.png',
+        './images/2/2_left_4.png',
+        './images/2/2_negative_left_4_alt.png',
+        './images/2/2_right_1.png',
+        './images/2/2_right_2.png',
+        './images/2/2_right_3.png',
+        './images/2/2_right_4.png',
+        './images/2/2_negative_right_4_alt.png',
+        './images/2/logo.png'
+      ];
+      preloadImagesWithProgress(imagesToPreload, ()=>{}, ()=>{
+        logoScreen.style.cursor = 'pointer';
+        logoScreen.onclick = showModeMenu;
+        logoScreen.setAttribute('tabindex','0');
+        logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { showModeMenu(); } };
+      });
+    }
+
+    initPreloadAndActivateLogo();
+    loadHighScore();
+    initLogoScreen();
+  </script>
 </body>
 </html>
