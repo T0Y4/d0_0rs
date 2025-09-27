@@ -14,136 +14,41 @@
       font-style: normal;
       font-display: block;
     }
-    html, body { 
-      margin:0; 
-      height:100%; 
-      background:#fff; 
-      overflow:hidden; 
-      touch-action:manipulation; 
-    }
-    body { 
-      display:flex; 
-      justify-content:center; 
-      align-items:center; 
-      height:100vh; 
-      font-family:'Tiny5', sans-serif; 
-      color:#000; 
-    }
-    .center-screen { 
-      position:fixed; 
-      inset:0; 
-      display:grid; 
-      place-items:center; 
-    }
-    .logo { 
-      width:min(500px, 90vw); 
-      height:auto; 
-      image-rendering:pixelated; 
-      display:block; 
-      cursor:default; 
-    }
-    .mode-menu { 
-      position:fixed; 
-      inset:0; 
-      background:#fff; 
-      display:none; 
-      align-items:center; 
-      justify-content:center; 
-    }
-    .mode-options { 
-      display:flex; 
-      flex-direction:column; 
-      align-items:center; 
-      gap:40px; 
-    }
-    .mode-option { 
-      font-size:60px; 
-      color:#000; 
-      cursor:pointer; 
-      display:flex; 
-      flex-direction:column; 
-      align-items:center; 
-      gap:8px; 
-    }
-    .mode-option.coming-soon { 
-      color:#888; 
-      cursor:not-allowed; 
-    }
-    .coming-soon-text { 
-      font-size:20px; 
-      color:#aaa; 
-      line-height:1; 
-    }
-    .menu-button { 
-      position:fixed; 
-      top:20px; 
-      left:20px; 
-      font-size:50px; 
-      color:#000; 
-      cursor:pointer; 
-      z-index:200; 
-    }
-    .scoreboard-container { 
-      position:fixed; 
-      top:20px; 
-      right:20px; 
-      text-align:right; 
-      z-index:100; 
-    }
-    .scoreboard, .high-score { 
-      font-size:50px; 
-    }
-    .hs-number { 
-      display:inline-block; 
-      color:#000; 
-      transform:scale(1); 
-    }
-    .hs-number.gold { 
-      color:#FFD700; 
-    }
-    .hs-number.pop { 
-      transform:scale(1.35); 
-    }
-    .try-again { 
-      position:fixed; 
-      top:50%; 
-      left:50%; 
-      transform:translate(-50%,-50%); 
-      font-size:50px; 
-      color:#000; 
-      z-index:201; 
-      opacity:0; 
-      pointer-events:none; 
-      cursor:pointer; 
-    }
-    .try-again.show { 
-      opacity:1; 
-      pointer-events:auto; 
-    }
-    .overlay { 
-      position:fixed; 
-      inset:0; 
-      background:#fff; 
-      z-index:199; 
-      opacity:0; 
-      pointer-events:none; 
-    }
-    .overlay.show { 
-      opacity:1; 
-      pointer-events:auto; 
-    }
-    #gameCanvas {
-      display: block;
-      image-rendering: pixelated;
-      image-rendering: -moz-crisp-edges;
-      image-rendering: crisp-edges;
-    }
+    html, body { margin:0; height:100%; background:#fff; overflow:hidden; touch-action:manipulation; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; }
+    .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
+    .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
+    .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
+    .mode-options { display:flex; flex-direction:column; align-items:center; gap:40px; }
+    .mode-option { font-size:60px; color:#000; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .mode-option.coming-soon { color:#888; cursor:not-allowed; }
+    .coming-soon-text { font-size:20px; color:#aaa; line-height:1; }
+    .menu-button { position:fixed; top:20px; left:20px; font-size:50px; color:#000; cursor:pointer; z-index:200; }
+    .scoreboard-container { position:fixed; top:20px; right:20px; text-align:right; z-index:100; }
+    .scoreboard, .high-score { font-size:50px; }
+    .hs-number { display:inline-block; color:#000; transform:scale(1); }
+    .hs-number.gold { color:#FFD700; }
+    .hs-number.pop { transform:scale(1.35); }
+    .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
+    .try-again.show { opacity:1; pointer-events:auto; }
+    .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
+    .overlay.show { opacity:1; pointer-events:auto; }
+    .image-container { position:relative; width:1000px; height:1000px; margin:0 auto; }
+    .static-image { width:100%; height:auto; display:block; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
+    .side { position:absolute; top:0; width:50%; height:100%; }
+    .left-side { left:0; } .right-side { right:0; }
+    .frame { position:absolute; top:0; left:0; width:100%; height:auto; display:none; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
     @media (max-width:768px) {
+      .image-container { width:500px; height:500px; }
       .scoreboard, .high-score { font-size:30px; }
       .menu-button { font-size:30px; }
       .try-again { font-size:30px; }
       .mode-option { font-size:40px; }
       .mode-options { gap:25px; }
+    }
+    
+    @media (max-width:500px) {
+      .image-container { width:90vw; height:90vw; max-width:400px; max-height:400px; }
     }
   </style>
 </head>
@@ -178,12 +83,23 @@
   <div class="try-again" id="try-again" onclick="resetPage()">try again</div>
   <div class="overlay" id="overlay" onclick="resetPage()"></div>
 
-  <canvas id="gameCanvas"></canvas>
+  <div class="image-container" id="image-container">
+    <img src="./images/2/2_static_image.png" alt="Static Image" class="static-image" id="static">
+    <div class="side left-side" onclick="handleClick('left')"></div>
+    <div class="side right-side" onclick="handleClick('right')"></div>
+    <img src="./images/2/2_left_1.png" id="left-frame-1" class="frame">
+    <img src="./images/2/2_left_2.png" id="left-frame-2" class="frame">
+    <img src="./images/2/2_left_3.png" id="left-frame-3" class="frame">
+    <img src="./images/2/2_negative_left_4_alt.png" id="negative-left-frame" class="frame">
+    <img src="./images/2/2_right_1.png" id="right-frame-1" class="frame">
+    <img src="./images/2/2_right_2.png" id="right-frame-2" class="frame">
+    <img src="./images/2/2_right_3.png" id="right-frame-3" class="frame">
+    <img src="./images/2/2_negative_right_4_alt.png" id="negative-right-frame" class="frame">
+  </div>
 
   <script>
     let score = 0, highScore = 0, isAnimating = false, gameStarted = false;
-    let canvas, ctx, images = {}, currentImage = '2_static_image.png';
-    let animationId = null, sceneToken = 0;
+    let activeTimers = [], sceneToken = 0;
 
     const hsNumberEl = document.querySelector('.hs-number');
     const scoreEl = document.getElementById('score');
@@ -205,6 +121,7 @@
     }
 
     function updateScore(v){
+      const prev = score;
       score = v;
       scoreEl.textContent = score;
       if(score > highScore){
@@ -215,139 +132,79 @@
       }
     }
 
-    function setupCanvas() {
-      canvas = document.getElementById('gameCanvas');
-      ctx = canvas.getContext('2d');
-      
-      const resize = () => {
-        const size = Math.min(window.innerWidth, window.innerHeight) * 0.8;
-        canvas.width = size;
-        canvas.height = size;
-        canvas.style.width = size + 'px';
-        canvas.style.height = size + 'px';
-        render();
-      };
-      
-      resize();
-      window.addEventListener('resize', resize);
+    function setT(fn, ms){ 
+      const id = setTimeout(fn, ms); 
+      activeTimers.push(id); 
+      return id; 
     }
-
-    async function loadImages() {
-      const imagePaths = [
-        'images/2/2_static_image.png',
-        'images/2/2_left_1.png',
-        'images/2/2_left_2.png',
-        'images/2/2_left_3.png',
-        'images/2/2_negative_left_4_alt.png',
-        'images/2/2_right_1.png',
-        'images/2/2_right_2.png',
-        'images/2/2_right_3.png',
-        'images/2/2_negative_right_4_alt.png'
-      ];
-      
-      const loadPromises = imagePaths.map(path => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve({ path, img });
-          img.onerror = () => reject(new Error(`Failed to load ${path}`));
-          img.src = path;
-        });
-      });
-      
-      try {
-        const loadedImages = await Promise.all(loadPromises);
-        loadedImages.forEach(({ path, img }) => {
-          images[path] = img;
-        });
-        initLogoScreen();
-      } catch (error) {
-        console.error('Image loading error:', error);
-      }
-    }
-
-    function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const img = images[`images/2/${currentImage}`];
-      if (img) {
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        const x = (canvas.width - img.width * scale) / 2;
-        const y = (canvas.height - img.height * scale) / 2;
-        
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-      }
-    }
-
-    function showFrames(imageNames, intervals, cb){
-      const myToken = ++sceneToken;
-      let i=0; 
-      let lastTime = 0;
-      
-      function animate(currentTime){
-        if(myToken !== sceneToken) return;
-        
-        if(i < imageNames.length){
-          const interval = Array.isArray(intervals) ? intervals[i] : intervals;
-          
-          if(currentTime - lastTime >= interval){
-            currentImage = imageNames[i];
-            render();
-            lastTime = currentTime;
-            
-            if(i < imageNames.length - 1){
-              i++;
-            } else {
-              setTimeout(() => {
-                if(myToken !== sceneToken) return;
-                cb();
-              }, interval);
-              return;
-            }
-          }
-          
-          if(myToken === sceneToken) {
-            requestAnimationFrame(animate);
-          }
-        }
-      }
-      
-      requestAnimationFrame(animate);
+    
+    function cancelAnimations(){ 
+      sceneToken++; 
+      activeTimers.forEach(clearTimeout); 
+      activeTimers = []; 
+      document.querySelectorAll('.frame').forEach(f=>f.style.display='none'); 
+      isAnimating=false; 
     }
 
     function handleClick(side){
       if(!gameStarted || isAnimating) return;
+      const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
+      if(!staticVisible) return;
       isAnimating = true;
+      document.getElementById('static').style.display = 'none';
+      scoreEl.style.display = 'block';
       const outcome = Math.floor(Math.random()*2);
       if(side==='left'){
         if(outcome===1){
-          showFrames(['2_left_1.png','2_left_2.png','2_left_3.png'],350,()=>{ 
-            currentImage = '2_static_image.png';
-            render();
-            updateScore(score+1); 
-            isAnimating=false; 
-          });
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['2_left_1.png','2_left_2.png','2_negative_left_4_alt.png'],[350,350,500],()=>{ 
-            showTryAgainText(); 
-            isAnimating=false; 
-          });
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }else{
         if(outcome===1){
-          showFrames(['2_right_1.png','2_right_2.png','2_right_3.png'],350,()=>{ 
-            currentImage = '2_static_image.png';
-            render();
-            updateScore(score+1); 
-            isAnimating=false; 
-          });
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['2_right_1.png','2_right_2.png','2_negative_right_4_alt.png'],[350,350,500],()=>{ 
-            showTryAgainText(); 
-            isAnimating=false; 
-          });
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }
+    }
+
+    function showFrames(ids, intervals, cb){
+      const myToken = ++sceneToken;
+      let i=0; 
+      const frames = ids.map(id=>document.getElementById(id));
+      const startTime = performance.now();
+      
+      function step(){
+        if(myToken !== sceneToken) return;
+        if(i < frames.length){
+          const f = frames[i];
+          f.style.display = 'block';
+          if(i < frames.length - 1){
+            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
+            setT(() => {
+              if(myToken !== sceneToken) return;
+              f.style.display = 'none';
+              i++;
+              step();
+            }, interval);
+          } else {
+            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
+            setT(() => {
+              if(myToken !== sceneToken) return;
+              cb();
+            }, interval);
+          }
+        }
+      }
+      step();
+    }
+
+    function resetToStatic(){
+      document.querySelectorAll('.frame').forEach(f=>f.style.display='none');
+      document.getElementById('static').style.display='block';
+      scoreEl.style.display='block';
+      document.getElementById('high-score').style.display='block';
     }
 
     function showTryAgainText(){
@@ -360,14 +217,13 @@
       document.getElementById('try-again').classList.remove('show');
       document.getElementById('overlay').classList.remove('show');
       updateScore(0);
-      currentImage = '2_static_image.png';
-      render();
+      resetToStatic();
     }
 
     function initLogoScreen(){
       const logoScreen = document.getElementById('logo-screen');
       const modeMenu = document.getElementById('mode-menu');
-      const gameContainer = document.getElementById('gameCanvas');
+      const gameContainer = document.getElementById('image-container');
       const scoreboard = document.querySelector('.scoreboard-container');
       const menuButton = document.getElementById('menu-button');
       gameContainer.style.display='none';
@@ -386,29 +242,44 @@
 
     function startGame(){
       const modeMenu = document.getElementById('mode-menu');
-      const gameContainer = document.getElementById('gameCanvas');
+      const gameContainer = document.getElementById('image-container');
       const scoreboard = document.querySelector('.scoreboard-container');
       const menuButton = document.getElementById('menu-button');
-      gameStarted=false; isAnimating=false;
-      updateScore(0); 
-      currentImage = '2_static_image.png';
-      render();
-      document.getElementById('try-again').classList.remove('show');
-      document.getElementById('overlay').classList.remove('show');
-      modeMenu.style.display='none';
-      gameContainer.style.display='block';
-      scoreboard.style.display='block';
-      menuButton.style.display='block';
-      gameStarted=true;
+      
+      const gameImages = [
+        './images/2/2_static_image.png',
+        './images/2/2_left_1.png',
+        './images/2/2_left_2.png',
+        './images/2/2_left_3.png',
+        './images/2/2_negative_left_4_alt.png',
+        './images/2/2_right_1.png',
+        './images/2/2_right_2.png',
+        './images/2/2_right_3.png',
+        './images/2/2_negative_right_4_alt.png'
+      ];
+      
+      preloadImagesWithProgress(gameImages, ()=>{}, ()=>{
+        cancelAnimations();
+        gameStarted=false; isAnimating=false;
+        updateScore(0); resetToStatic();
+        document.getElementById('try-again').classList.remove('show');
+        document.getElementById('overlay').classList.remove('show');
+        modeMenu.style.display='none';
+        gameContainer.style.display='block';
+        scoreboard.style.display='block';
+        menuButton.style.display='block';
+        gameStarted=true;
+      });
     }
 
     function returnToMenu(){
-      const gameContainer = document.getElementById('gameCanvas');
+      const gameContainer = document.getElementById('image-container');
       const scoreboard = document.querySelector('.scoreboard-container');
       const menuButton = document.getElementById('menu-button');
       const modeMenu = document.getElementById('mode-menu');
       const tryAgain = document.getElementById('try-again');
       const overlay = document.getElementById('overlay');
+      cancelAnimations();
       gameStarted=false; updateScore(0);
       gameContainer.style.display='none';
       scoreboard.style.display='none';
@@ -418,33 +289,74 @@
       modeMenu.style.display='flex';
     }
 
-    function setupEventListeners() {
-      canvas.addEventListener('click', (e) => {
-        if (!gameStarted || isAnimating) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const side = x < canvas.width / 2 ? 'left' : 'right';
-        handleClick(side);
+    function preloadImagesWithProgress(srcs, onProgress, onDone){
+      let loaded=0; const total=srcs.length;
+      if(total===0){ onProgress(100); onDone(); return; }
+      srcs.forEach(src=>{
+        const img=new Image();
+        img.onload=()=>{ 
+          loaded++; 
+          onProgress(Math.round(loaded/total*100)); 
+          if(loaded>=total) onDone(); 
+        };
+        img.onerror=()=>{ 
+          console.error('Image loading error:', src);
+          loaded++; 
+          onProgress(Math.round(loaded/total*100)); 
+          if(loaded>=total) onDone(); 
+        };
+        img.src=src;
       });
-      
-      canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (!gameStarted || isAnimating) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = e.touches[0].clientX - rect.left;
-        const side = x < canvas.width / 2 ? 'left' : 'right';
-        handleClick(side);
-      });
-
-      document.getElementById('logo-screen').addEventListener('click', showModeMenu);
     }
 
-    setupCanvas();
-    loadImages();
+    function initPreloadAndActivateLogo(){
+      const logoScreen = document.getElementById('logo-screen');
+      const imagesToPreload = [
+        './images/2/2_static_image.png',
+        './images/2/2_left_1.png',
+        './images/2/2_left_2.png',
+        './images/2/2_left_3.png',
+        './images/2/2_negative_left_4_alt.png',
+        './images/2/2_right_1.png',
+        './images/2/2_right_2.png',
+        './images/2/2_right_3.png',
+        './images/2/2_negative_right_4_alt.png',
+        './images/2/logo.png'
+      ];
+      preloadImagesWithProgress(imagesToPreload, ()=>{}, ()=>{
+        logoScreen.style.cursor = 'pointer';
+        logoScreen.onclick = showModeMenu;
+        logoScreen.setAttribute('tabindex','0');
+        logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { showModeMenu(); } };
+      });
+    }
+
+    function forcePreloadImages() {
+      const allImages = [
+        './images/2/2_static_image.png',
+        './images/2/2_left_1.png',
+        './images/2/2_left_2.png',
+        './images/2/2_left_3.png',
+        './images/2/2_negative_left_4_alt.png',
+        './images/2/2_right_1.png',
+        './images/2/2_right_2.png',
+        './images/2/2_right_3.png',
+        './images/2/2_negative_right_4_alt.png',
+        './images/2/logo.png'
+      ];
+      
+      allImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+        document.body.appendChild(img);
+        document.body.removeChild(img);
+      });
+    }
+    
+    initPreloadAndActivateLogo();
     loadHighScore();
-    setupEventListeners();
+    initLogoScreen();
+    forcePreloadImages();
   </script>
 </body>
 </html>
