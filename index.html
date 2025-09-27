@@ -158,13 +158,13 @@
         if(outcome===1){
           showFrames(['left-frame-1','left-frame-2','left-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[350,350,500],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }else{
         if(outcome===1){
           showFrames(['right-frame-1','right-frame-2','right-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[350,350,500],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }
     }
@@ -173,31 +173,40 @@
       const myToken = ++sceneToken;
       let i=0; 
       const frames = ids.map(id=>document.getElementById(id));
-      const startTime = performance.now();
+      let lastTime = 0;
       
-      function step(){
+      function animate(currentTime){
         if(myToken !== sceneToken) return;
+        
         if(i < frames.length){
           const f = frames[i];
-          f.style.display = 'block';
-          if(i < frames.length - 1){
-            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
-            setT(() => {
-              if(myToken !== sceneToken) return;
-              f.style.display = 'none';
+          const interval = Array.isArray(intervals) ? intervals[i] : intervals;
+          
+          if(currentTime - lastTime >= interval){
+            if(i > 0) {
+              frames[i-1].style.display = 'none';
+            }
+            f.style.display = 'block';
+            lastTime = currentTime;
+            
+            if(i < frames.length - 1){
               i++;
-              step();
-            }, interval);
-          } else {
-            const interval = Array.isArray(intervals) ? intervals[i] : intervals;
-            setT(() => {
-              if(myToken !== sceneToken) return;
-              cb();
-            }, interval);
+            } else {
+              setTimeout(() => {
+                if(myToken !== sceneToken) return;
+                cb();
+              }, interval);
+              return;
+            }
+          }
+          
+          if(myToken === sceneToken) {
+            requestAnimationFrame(animate);
           }
         }
       }
-      step();
+      
+      requestAnimationFrame(animate);
     }
 
     function resetToStatic(){
