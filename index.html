@@ -234,7 +234,9 @@
     }
 
     function showModeMenu(){
-      document.getElementById('logo-screen').style.display='none';
+      const logoScreen = document.getElementById('logo-screen');
+      logoScreen.style.display='none';
+      logoScreen.removeEventListener('click', showModeMenu);
       document.getElementById('mode-menu').style.display='flex';
     }
 
@@ -329,11 +331,10 @@
       preloadImagesWithProgress(imagesToPreload, ()=>{}, ()=>{
         startLogoAnimation();
         logoScreen.style.cursor = 'pointer';
-        logoScreen.onclick = showModeMenu;
+        // Обработчик клика по всему экрану логотипа
+        logoScreen.addEventListener('click', showModeMenu);
         logoScreen.setAttribute('tabindex','0');
         logoScreen.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' ') { showModeMenu(); } };
-        // Добавляем обработчик клика по любому месту страницы
-        document.addEventListener('click', showModeMenu);
       });
     }
 
