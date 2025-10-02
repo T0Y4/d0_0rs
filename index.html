@@ -34,10 +34,9 @@
     .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
     .overlay.show { opacity:1; pointer-events:auto; }
     .image-container { position:relative; width:min(100vw, 100vh); height:min(100vw, 100vh); max-width:600px; max-height:600px; margin:0 auto; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-    .static-image { width:100%; height:100%; display:block; image-rendering:pixelated; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+    .game-image { width:100%; height:100%; display:block; image-rendering:pixelated; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     .side { position:absolute; top:0; width:50%; height:100%; cursor:pointer; }
     .left-side { left:0; } .right-side { right:0; }
-    .frame { position:absolute; top:0; left:0; width:100%; height:100%; display:none; image-rendering:pixelated; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     @media (max-width:768px) {
       .scoreboard, .high-score { font-size:30px; }
       .menu-button { font-size:30px; }
@@ -47,7 +46,7 @@
       
       /* Мобильные оптимизации для устранения двоения */
       .image-container { max-width:90vw; max-height:90vw; }
-      .static-image, .frame { 
+      .game-image { 
         -webkit-transform:translateZ(0) scale(1); 
         transform:translateZ(0) scale(1);
         -webkit-perspective:1000px;
@@ -88,17 +87,9 @@
   <div class="overlay" id="overlay" onclick="resetPage()"></div>
 
   <div class="image-container" id="image-container">
-    <img src="./images/2/2_static_image.svg" alt="Static Image" class="static-image" id="static">
+    <img src="./images/2/2_static_image.svg" alt="Game Image" class="game-image" id="game-image">
     <div class="side left-side" onclick="handleClick('left')" ontouchstart="handleClick('left')"></div>
     <div class="side right-side" onclick="handleClick('right')" ontouchstart="handleClick('right')"></div>
-    <img src="./images/2/2_left_1.svg" id="left-frame-1" class="frame">
-    <img src="./images/2/2_left_2.svg" id="left-frame-2" class="frame">
-    <img src="./images/2/2_left_3.svg" id="left-frame-3" class="frame">
-    <img src="./images/2/2_negative_left_4.svg" id="negative-left-frame" class="frame">
-    <img src="./images/2/2_right_1.svg" id="right-frame-1" class="frame">
-    <img src="./images/2/2_right_2.svg" id="right-frame-2" class="frame">
-    <img src="./images/2/2_right_3.svg" id="right-frame-3" class="frame">
-    <img src="./images/2/2_negative_right_4.svg" id="negative-right-frame" class="frame">
   </div>
 
   <script>
@@ -108,11 +99,29 @@
     // Кэшируем DOM элементы для производительности
     const hsNumberEl = document.querySelector('.hs-number');
     const scoreEl = document.getElementById('score');
-    const staticEl = document.getElementById('static');
+    const gameImageEl = document.getElementById('game-image');
     const tryAgainEl = document.getElementById('try-again');
     const overlayEl = document.getElementById('overlay');
     const highScoreEl = document.getElementById('high-score');
-    const frames = document.querySelectorAll('.frame');
+    
+    // Предзагружаем все игровые изображения
+    const gameImages = {
+      static: './images/2/2_static_image.svg',
+      left1: './images/2/2_left_1.svg',
+      left2: './images/2/2_left_2.svg',
+      left3: './images/2/2_left_3.svg',
+      leftNegative: './images/2/2_negative_left_4.svg',
+      right1: './images/2/2_right_1.svg',
+      right2: './images/2/2_right_2.svg',
+      right3: './images/2/2_right_3.svg',
+      rightNegative: './images/2/2_negative_right_4.svg'
+    };
+    
+    // Предзагружаем изображения
+    Object.values(gameImages).forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
 
     function loadHighScore(){
       const s = localStorage.getItem('doors_high_score');
@@ -154,10 +163,6 @@
         clearTimeout(activeTimers[i]);
       }
       activeTimers = []; 
-      for(let i = 0; i < frames.length; i++) {
-        frames[i].style.visibility = 'hidden';
-        frames[i].style.display = 'none';
-      }
       isAnimating=false; 
     }
 
@@ -165,7 +170,6 @@
       if(!gameStarted || isAnimating) return;
       
       isAnimating = true;
-      staticEl.style.display = 'none';
       scoreEl.style.display = 'block';
       
       // Добавляем тактильную обратную связь для мобильных
@@ -179,43 +183,42 @@
       
       if(isLeft){
         if(isWin){
-          showFrames(['left-frame-1','left-frame-2','left-frame-3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showGameSequence(['left1','left2','left3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
+          showGameSequence(['left1','left2','leftNegative'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }else{
-        if(outcome===1){
-          showFrames(['right-frame-1','right-frame-2','right-frame-3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+        if(isWin){
+          showGameSequence(['right1','right2','right3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
+          showGameSequence(['right1','right2','rightNegative'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }
     }
 
-    function showFrames(ids, intervals, cb){
+    // Новая функция для игры - использует один элемент
+    function showGameSequence(imageKeys, intervals, cb){
       const myToken = ++sceneToken;
-      let i=0; 
-      const frames = ids.map(id=>document.getElementById(id));
+      let i=0;
       
       function step(){
         if(myToken !== sceneToken) return;
-        if(i < frames.length){
-          const f = frames[i];
+        if(i < imageKeys.length){
+          const imageKey = imageKeys[i];
           
-          // Принудительно скрываем все кадры перед показом нового
-          for(let j = 0; j < frames.length; j++) {
-            frames[j].style.visibility = 'hidden';
-            frames[j].style.display = 'none';
-          }
+          // Плавно скрываем изображение
+          gameImageEl.style.opacity = '0';
           
-          // Показываем только текущий кадр
-          f.style.visibility = 'visible';
-          f.style.display = 'block';
+          // Принудительный reflow
+          gameImageEl.offsetHeight;
           
-          // Принудительный reflow для устранения двоения
-          f.offsetHeight;
+          // Меняем изображение
+          gameImageEl.src = gameImages[imageKey];
           
-          if(i < frames.length - 1){
+          // Плавно показываем изображение
+          gameImageEl.style.opacity = '1';
+          
+          if(i < imageKeys.length - 1){
             const interval = Array.isArray(intervals) ? intervals[i] : intervals;
             setT(() => {
               if(myToken !== sceneToken) return;
@@ -285,16 +288,10 @@
     }
 
     function resetToStatic(){
-      // Принудительно скрываем все кадры
-      for(let i = 0; i < frames.length; i++) {
-        frames[i].style.visibility = 'hidden';
-        frames[i].style.display = 'none';
-      }
+      // Возвращаем статичное изображение
+      gameImageEl.src = gameImages.static;
+      gameImageEl.style.opacity = '1';
       
-      // Принудительный reflow для устранения двоения
-      staticEl.offsetHeight;
-      
-      staticEl.style.display='block';
       scoreEl.style.display='block';
       highScoreEl.style.display='block';
     }
@@ -346,24 +343,14 @@
       const scoreboard = document.querySelector('.scoreboard-container');
       const menuButton = document.getElementById('menu-button');
       
-      const gameImages = [
-        './images/2/2_static_image.svg',
-        './images/2/2_left_1.svg',
-        './images/2/2_left_2.svg',
-        './images/2/2_left_3.svg',
-        './images/2/2_negative_left_4.svg',
-        './images/2/2_right_1.svg',
-        './images/2/2_right_2.svg',
-        './images/2/2_right_3.svg',
-        './images/2/2_negative_right_4.svg'
-      ];
+      const gameImagesArray = Object.values(gameImages);
       
-      preloadImagesWithProgress(gameImages, ()=>{}, ()=>{
+      preloadImagesWithProgress(gameImagesArray, ()=>{}, ()=>{
         cancelAnimations();
         gameStarted=false; isAnimating=false;
         updateScore(0); resetToStatic();
-        document.getElementById('try-again').classList.remove('show');
-        document.getElementById('overlay').classList.remove('show');
+        tryAgainEl.classList.remove('show');
+        overlayEl.classList.remove('show');
         modeMenu.style.display='none';
         gameContainer.style.display='block';
         scoreboard.style.display='block';
@@ -387,8 +374,8 @@
       gameContainer.style.display='none';
       scoreboard.style.display='none';
       menuButton.style.display='none';
-      tryAgain.classList.remove('show');
-      overlay.classList.remove('show');
+      tryAgainEl.classList.remove('show');
+      overlayEl.classList.remove('show');
       modeMenu.style.display='flex';
       
       // Останавливаем анимацию логотипа если она была запущена
@@ -419,15 +406,7 @@
       const logoScreen = document.getElementById('logo-screen');
       const logoImg = document.getElementById('logo');
       const imagesToPreload = [
-        './images/2/2_static_image.svg',
-        './images/2/2_left_1.svg',
-        './images/2/2_left_2.svg',
-        './images/2/2_left_3.svg',
-        './images/2/2_negative_left_4.svg',
-        './images/2/2_right_1.svg',
-        './images/2/2_right_2.svg',
-        './images/2/2_right_3.svg',
-        './images/2/2_negative_right_4.svg',
+        ...Object.values(gameImages),
         './images/2/logo.svg',
         './images/2/logo_1.svg',
         './images/2/logo_2.svg'
@@ -462,15 +441,7 @@
 
     function forcePreloadImages() {
       const allImages = [
-        './images/2/2_static_image.svg',
-        './images/2/2_left_1.svg',
-        './images/2/2_left_2.svg',
-        './images/2/2_left_3.svg',
-        './images/2/2_negative_left_4.svg',
-        './images/2/2_right_1.svg',
-        './images/2/2_right_2.svg',
-        './images/2/2_right_3.svg',
-        './images/2/2_negative_right_4.svg',
+        ...Object.values(gameImages),
         './images/2/logo.svg',
         './images/2/logo_1.svg',
         './images/2/logo_2.svg'
@@ -512,7 +483,7 @@
         });
         
         // Оптимизируем рендеринг для мобильных
-        const gameElements = document.querySelectorAll('.image-container, .static-image, .frame, .logo');
+        const gameElements = document.querySelectorAll('.image-container, .game-image, .logo');
         gameElements.forEach(el => {
           el.style.webkitTransform = 'translateZ(0) scale(1)';
           el.style.transform = 'translateZ(0) scale(1)';
