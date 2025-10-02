@@ -14,8 +14,8 @@
       font-style: normal;
       font-display: block;
     }
-    html, body { margin:0; height:100%; background:#fff; overflow:hidden; touch-action:manipulation; }
-    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; }
+    html, body { margin:0; height:100%; background:#fff; overflow:hidden; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; transform:translateZ(0); }
     .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
     .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
     .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
@@ -29,15 +29,15 @@
     .hs-number { display:inline-block; color:#000; transform:scale(1); }
     .hs-number.gold { color:#FFD700; }
     .hs-number.pop { transform:scale(1.35); }
-    .try-again { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
+    .try-again { position:fixed; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:50px; color:#000; z-index:201; opacity:0; pointer-events:none; cursor:pointer; }
     .try-again.show { opacity:1; pointer-events:auto; }
     .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
     .overlay.show { opacity:1; pointer-events:auto; }
-    .image-container { position:relative; width:100vw; height:100vh; max-width:100%; max-height:100%; }
-    .static-image { width:100%; height:100%; object-fit:contain; display:block; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
-    .side { position:absolute; top:0; width:50%; height:100%; }
+    .image-container { position:relative; width:min(100vw, 100vh); height:min(100vw, 100vh); max-width:600px; max-height:600px; margin:0 auto; transform:translateZ(0); }
+    .static-image { width:100%; height:100%; display:block; image-rendering:pixelated; transform:translateZ(0); }
+    .side { position:absolute; top:0; width:50%; height:100%; cursor:pointer; }
     .left-side { left:0; } .right-side { right:0; }
-    .frame { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; display:none; image-rendering:pixelated; image-rendering:-moz-crisp-edges; image-rendering:crisp-edges; }
+    .frame { position:absolute; top:0; left:0; width:100%; height:100%; display:none; image-rendering:pixelated; transform:translateZ(0); }
     @media (max-width:768px) {
       .scoreboard, .high-score { font-size:30px; }
       .menu-button { font-size:30px; }
@@ -80,8 +80,8 @@
 
   <div class="image-container" id="image-container">
     <img src="./images/2/2_static_image.svg" alt="Static Image" class="static-image" id="static">
-    <div class="side left-side" onclick="handleClick('left')"></div>
-    <div class="side right-side" onclick="handleClick('right')"></div>
+    <div class="side left-side" onclick="handleClick('left')" ontouchstart="handleClick('left')"></div>
+    <div class="side right-side" onclick="handleClick('right')" ontouchstart="handleClick('right')"></div>
     <img src="./images/2/2_left_1.svg" id="left-frame-1" class="frame">
     <img src="./images/2/2_left_2.svg" id="left-frame-2" class="frame">
     <img src="./images/2/2_left_3.svg" id="left-frame-3" class="frame">
@@ -96,8 +96,14 @@
     let score = 0, highScore = 0, isAnimating = false, gameStarted = false;
     let activeTimers = [], sceneToken = 0;
 
+    // Кэшируем DOM элементы для производительности
     const hsNumberEl = document.querySelector('.hs-number');
     const scoreEl = document.getElementById('score');
+    const staticEl = document.getElementById('static');
+    const tryAgainEl = document.getElementById('try-again');
+    const overlayEl = document.getElementById('overlay');
+    const highScoreEl = document.getElementById('high-score');
+    const frames = document.querySelectorAll('.frame');
 
     function loadHighScore(){
       const s = localStorage.getItem('doors_high_score');
@@ -135,31 +141,44 @@
     
     function cancelAnimations(){ 
       sceneToken++; 
-      activeTimers.forEach(clearTimeout); 
+      for(let i = 0; i < activeTimers.length; i++) {
+        clearTimeout(activeTimers[i]);
+      }
       activeTimers = []; 
-      document.querySelectorAll('.frame').forEach(f=>f.style.display='none'); 
+      for(let i = 0; i < frames.length; i++) {
+        frames[i].style.visibility = 'hidden';
+        frames[i].style.display = 'none';
+      }
       isAnimating=false; 
     }
 
     function handleClick(side){
       if(!gameStarted || isAnimating) return;
-      const staticVisible = getComputedStyle(document.getElementById('static')).display !== 'none';
-      if(!staticVisible) return;
+      
       isAnimating = true;
-      document.getElementById('static').style.display = 'none';
+      staticEl.style.display = 'none';
       scoreEl.style.display = 'block';
+      
+      // Добавляем тактильную обратную связь для мобильных
+      if('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      
       const outcome = Math.floor(Math.random()*2);
-      if(side==='left'){
-        if(outcome===1){
-          showFrames(['left-frame-1','left-frame-2','left-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+      const isLeft = side === 'left';
+      const isWin = outcome === 1;
+      
+      if(isLeft){
+        if(isWin){
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }else{
         if(outcome===1){
-          showFrames(['right-frame-1','right-frame-2','right-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],200,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[200,200,400],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }
     }
@@ -168,17 +187,20 @@
       const myToken = ++sceneToken;
       let i=0; 
       const frames = ids.map(id=>document.getElementById(id));
-      const startTime = performance.now();
       
       function step(){
         if(myToken !== sceneToken) return;
         if(i < frames.length){
           const f = frames[i];
+          // Используем visibility вместо display для лучшей производительности
+          f.style.visibility = 'visible';
           f.style.display = 'block';
+          
           if(i < frames.length - 1){
             const interval = Array.isArray(intervals) ? intervals[i] : intervals;
             setT(() => {
               if(myToken !== sceneToken) return;
+              f.style.visibility = 'hidden';
               f.style.display = 'none';
               i++;
               step();
@@ -195,22 +217,65 @@
       step();
     }
 
+    // Оптимизированная функция анимации для логотипа
+    function animateSequence(element, sequence, interval, loop = true, onComplete = null){
+      let currentIndex = 0;
+      let animationId;
+      
+      // Предзагружаем все изображения для устранения мерцания
+      const preloadedImages = [];
+      sequence.forEach(src => {
+        const img = new Image();
+        img.src = src;
+        preloadedImages.push(img);
+      });
+      
+      function step(){
+        if(element && sequence && sequence.length > 0){
+          // Используем предзагруженное изображение
+          element.src = preloadedImages[currentIndex].src;
+          currentIndex++;
+          
+          if(currentIndex >= sequence.length){
+            if(loop){
+              currentIndex = 0;
+            } else {
+              if(onComplete) onComplete();
+              return;
+            }
+          }
+          
+          animationId = setTimeout(step, interval);
+        }
+      }
+      
+      step();
+      
+      // Возвращаем функцию для остановки анимации
+      return () => {
+        if(animationId) clearTimeout(animationId);
+      };
+    }
+
     function resetToStatic(){
-      document.querySelectorAll('.frame').forEach(f=>f.style.display='none');
-      document.getElementById('static').style.display='block';
+      for(let i = 0; i < frames.length; i++) {
+        frames[i].style.visibility = 'hidden';
+        frames[i].style.display = 'none';
+      }
+      staticEl.style.display='block';
       scoreEl.style.display='block';
-      document.getElementById('high-score').style.display='block';
+      highScoreEl.style.display='block';
     }
 
     function showTryAgainText(){
       if(!gameStarted) return;
-      document.getElementById('try-again').classList.add('show');
-      document.getElementById('overlay').classList.add('show');
+      tryAgainEl.classList.add('show');
+      overlayEl.classList.add('show');
     }
 
     function resetPage(){
-      document.getElementById('try-again').classList.remove('show');
-      document.getElementById('overlay').classList.remove('show');
+      tryAgainEl.classList.remove('show');
+      overlayEl.classList.remove('show');
       updateScore(0);
       resetToStatic();
     }
@@ -221,6 +286,7 @@
       const gameContainer = document.getElementById('image-container');
       const scoreboard = document.querySelector('.scoreboard-container');
       const menuButton = document.getElementById('menu-button');
+      
       gameContainer.style.display='none';
       scoreboard.style.display='none';
       menuButton.style.display='none';
@@ -230,9 +296,14 @@
 
     function showModeMenu(){
       const logoScreen = document.getElementById('logo-screen');
+      const modeMenu = document.getElementById('mode-menu');
+      
+      // Останавливаем анимацию логотипа
+      if(logoAnimationStop) logoAnimationStop();
+      
       logoScreen.style.display='none';
       logoScreen.removeEventListener('click', showModeMenu);
-      document.getElementById('mode-menu').style.display='flex';
+      modeMenu.style.display='flex';
     }
 
     function selectMode(mode){ if(mode==='hs') startGame(); }
@@ -276,14 +347,20 @@
       const modeMenu = document.getElementById('mode-menu');
       const tryAgain = document.getElementById('try-again');
       const overlay = document.getElementById('overlay');
+      
       cancelAnimations();
-      gameStarted=false; updateScore(0);
+      gameStarted=false; 
+      updateScore(0);
+      
       gameContainer.style.display='none';
       scoreboard.style.display='none';
       menuButton.style.display='none';
       tryAgain.classList.remove('show');
       overlay.classList.remove('show');
       modeMenu.style.display='flex';
+      
+      // Останавливаем анимацию логотипа если она была запущена
+      if(logoAnimationStop) logoAnimationStop();
     }
 
     function preloadImagesWithProgress(srcs, onProgress, onDone){
@@ -333,6 +410,8 @@
       });
     }
 
+    let logoAnimationStop = null;
+
     function startLogoAnimation(){
       const logoImg = document.getElementById('logo');
       const logoSequence = [
@@ -341,15 +420,12 @@
         './images/2/logo.svg',
         './images/2/logo_2.svg'
       ];
-      let currentIndex = 0;
       
-      function animateLogo(){
-        logoImg.src = logoSequence[currentIndex];
-        currentIndex = (currentIndex + 1) % logoSequence.length;
-        setTimeout(animateLogo, 300);
-      }
+      // Останавливаем предыдущую анимацию если есть
+      if(logoAnimationStop) logoAnimationStop();
       
-      animateLogo();
+      // Запускаем новую анимацию
+      logoAnimationStop = animateSequence(logoImg, logoSequence, 200, true);
     }
 
     function forcePreloadImages() {
@@ -375,6 +451,25 @@
         document.body.removeChild(img);
       });
     }
+    
+    // Предотвращение зума на двойное касание
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
+    
+    // Оптимизация производительности
+    document.addEventListener('DOMContentLoaded', () => {
+      // Принудительное включение аппаратного ускорения для всех элементов
+      const allElements = document.querySelectorAll('*');
+      for(let i = 0; i < allElements.length; i++) {
+        allElements[i].style.transform = 'translateZ(0)';
+      }
+    });
     
     initPreloadAndActivateLogo();
     loadHighScore();
