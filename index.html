@@ -23,7 +23,7 @@
     .screen.active { display: flex; align-items: center; justify-content: center; }
     
     .logo { width: min(500px, 90vw); height: auto; }
-    .game-image { width: min(100vw, 100vh); height: min(100vw, 100vh); max-width: 600px; max-height: 600px; }
+    .game-image { width: min(100vw, 100vh); height: min(100vw, 100vh); max-width: 600px; max-height: 600px; transition: opacity 0.1s ease; }
     
     .menu-button { position: fixed; top: 20px; left: 20px; font-size: 50px; cursor: pointer; z-index: 100; }
     .scoreboard { position: fixed; top: 20px; right: 20px; font-size: 50px; text-align: right; z-index: 100; }
@@ -86,6 +86,7 @@
     let highScore = 0;
     let isAnimating = false;
     let gameStarted = false;
+    let currentAnimation = null;
 
     // DOM элементы
     const screens = {
@@ -114,14 +115,32 @@
       rightFail: './images/2/2_negative_right_4.svg'
     };
 
-    // Предзагрузка изображений
-    Object.values(images).forEach(src => {
+    // Улучшенная предзагрузка изображений
+    const preloadedImages = {};
+    let imagesLoaded = 0;
+    const totalImages = Object.keys(images).length;
+    
+    Object.entries(images).forEach(([key, src]) => {
       const img = new Image();
+      img.onload = () => {
+        imagesLoaded++;
+        preloadedImages[key] = img;
+        console.log(`Loaded: ${key} (${imagesLoaded}/${totalImages})`);
+      };
+      img.onerror = () => {
+        console.error(`Failed to load: ${key}`);
+        imagesLoaded++;
+      };
       img.src = src;
     });
 
     // Функции экранов
     function showScreen(screenName) {
+      // Отменяем все анимации при смене экрана
+      if (currentAnimation) {
+        currentAnimation();
+      }
+      
       Object.values(screens).forEach(screen => screen.classList.remove('active'));
       screens[screenName].classList.add('active');
       currentScreen = screenName;
@@ -164,10 +183,16 @@
 
     // Сброс игры
     function resetGame() {
+      // Отменяем текущую анимацию
+      if (currentAnimation) {
+        currentAnimation();
+      }
+      
       score = 0;
       isAnimating = false;
       gameStarted = true; // Исправлено: игра должна оставаться активной
       gameImage.src = images.static;
+      gameImage.style.opacity = '1'; // Убеждаемся что изображение видно
       tryAgain.style.display = 'none';
       overlay.style.display = 'none';
       menuButton.style.display = 'block'; // Кнопка menu видна на try again экране
@@ -190,26 +215,58 @@
       gameStarted = true;
     }
 
-    // Анимация последовательности
+    // Оптимизированная анимация последовательности
     function animateSequence(sequence, delays, callback) {
       if (isAnimating) return;
-      isAnimating = true;
       
+      // Отменяем предыдущую анимацию если есть
+      if (currentAnimation) {
+        currentAnimation();
+      }
+      
+      isAnimating = true;
       let index = 0;
+      let animationId;
       
       function nextFrame() {
+        if (!isAnimating) return; // Проверка на отмену анимации
+        
         if (index < sequence.length) {
-          gameImage.src = images[sequence[index]];
+          // Принудительно скрываем изображение
+          gameImage.style.opacity = '0';
+          
+          // Принудительный reflow
+          gameImage.offsetHeight;
+          
+          // Меняем изображение (используем предзагруженное если доступно)
+          const imageKey = sequence[index];
+          if (preloadedImages[imageKey]) {
+            gameImage.src = preloadedImages[imageKey].src;
+          } else {
+            gameImage.src = images[imageKey];
+          }
+          
+          // Показываем изображение
+          gameImage.style.opacity = '1';
+          
           const delay = Array.isArray(delays) ? delays[index] : delays;
-          setTimeout(nextFrame, delay);
+          animationId = setTimeout(nextFrame, delay);
           index++;
         } else {
           isAnimating = false;
+          currentAnimation = null;
           if (callback) callback();
         }
       }
       
       nextFrame();
+      
+      // Сохраняем функцию для отмены анимации
+      currentAnimation = () => {
+        if (animationId) clearTimeout(animationId);
+        isAnimating = false;
+        currentAnimation = null;
+      };
     }
 
     // Обработка клика
@@ -252,7 +309,7 @@
       const logo = document.getElementById('logo');
       const logoImages = [
         './images/2/logo.svg',
-        './images/2/logo_1.svg',
+        './images/2/logo_1.svg', 
         './images/2/logo.svg',
         './images/2/logo_2.svg'
       ];
