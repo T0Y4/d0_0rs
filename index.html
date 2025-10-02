@@ -23,7 +23,15 @@
     .screen.active { display: flex; align-items: center; justify-content: center; }
     
     .logo { width: min(500px, 90vw); height: auto; }
-    .game-image { width: min(100vw, 100vh); height: min(100vw, 100vh); max-width: 600px; max-height: 600px; transition: opacity 0.1s ease; }
+    .game-image { 
+      width: min(100vw, 100vh); 
+      height: min(100vw, 100vh); 
+      max-width: 600px; 
+      max-height: 600px; 
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
     
     .menu-button { position: fixed; top: 20px; left: 20px; font-size: 50px; cursor: pointer; z-index: 100; }
     .scoreboard { position: fixed; top: 20px; right: 20px; font-size: 50px; text-align: right; z-index: 100; }
@@ -67,7 +75,7 @@
 
   <!-- Игровой экран -->
   <div class="screen" id="game-screen">
-    <img src="./images/2/2_static_image.svg" alt="Game" class="game-image" id="game-image">
+    <canvas id="game-canvas" class="game-image"></canvas>
   </div>
 
   <!-- UI элементы -->
@@ -86,7 +94,6 @@
     let highScore = 0;
     let isAnimating = false;
     let gameStarted = false;
-    let currentAnimation = null;
 
     // DOM элементы
     const screens = {
@@ -94,7 +101,8 @@
       menu: document.getElementById('menu-screen'),
       game: document.getElementById('game-screen')
     };
-    const gameImage = document.getElementById('game-image');
+    const gameCanvas = document.getElementById('game-canvas');
+    const gameCtx = gameCanvas.getContext('2d');
     const scoreboard = document.getElementById('scoreboard');
     const currentScore = document.getElementById('current-score');
     const hsNumber = document.getElementById('hs-number');
@@ -115,7 +123,7 @@
       rightFail: './images/2/2_negative_right_4.svg'
     };
 
-    // Улучшенная предзагрузка изображений
+    // Предзагрузка изображений
     const preloadedImages = {};
     let imagesLoaded = 0;
     const totalImages = Object.keys(images).length;
@@ -134,16 +142,36 @@
       img.src = src;
     });
 
+    // Настройка Canvas
+    function setupCanvas() {
+      const size = Math.min(window.innerWidth, window.innerHeight, 600);
+      gameCanvas.width = size;
+      gameCanvas.height = size;
+      gameCanvas.style.width = size + 'px';
+      gameCanvas.style.height = size + 'px';
+    }
+
     // Функции экранов
     function showScreen(screenName) {
-      // Отменяем все анимации при смене экрана
-      if (currentAnimation) {
-        currentAnimation();
-      }
+      // Останавливаем все анимации при смене экрана
+      stopAllAnimations();
       
       Object.values(screens).forEach(screen => screen.classList.remove('active'));
       screens[screenName].classList.add('active');
       currentScreen = screenName;
+    }
+
+    // Остановка всех анимаций
+    function stopAllAnimations() {
+      isAnimating = false;
+    }
+
+    // Отрисовка изображения на Canvas
+    function drawImage(imageKey) {
+      if (preloadedImages[imageKey]) {
+        gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+        gameCtx.drawImage(preloadedImages[imageKey], 0, 0, gameCanvas.width, gameCanvas.height);
+      }
     }
 
     // Загрузка рекорда
@@ -183,19 +211,18 @@
 
     // Сброс игры
     function resetGame() {
-      // Отменяем текущую анимацию
-      if (currentAnimation) {
-        currentAnimation();
-      }
+      // Останавливаем все анимации
+      stopAllAnimations();
       
       score = 0;
-      isAnimating = false;
-      gameStarted = true; // Исправлено: игра должна оставаться активной
-      gameImage.src = images.static;
-      gameImage.style.opacity = '1'; // Убеждаемся что изображение видно
+      gameStarted = true;
+      
+      // Отрисовываем статичное изображение
+      drawImage('static');
+      
       tryAgain.style.display = 'none';
       overlay.style.display = 'none';
-      menuButton.style.display = 'block'; // Кнопка menu видна на try again экране
+      menuButton.style.display = 'block';
       updateScoreboard();
     }
 
@@ -211,62 +238,41 @@
       showScreen('game');
       menuButton.style.display = 'block';
       scoreboard.style.display = 'block';
+      
+      // Настраиваем Canvas
+      setupCanvas();
+      
+      // Отрисовываем статичное изображение при старте
+      drawImage('static');
+      
       resetGame();
       gameStarted = true;
     }
 
-    // Оптимизированная анимация последовательности
+    // Анимация последовательности кадров
     function animateSequence(sequence, delays, callback) {
       if (isAnimating) return;
       
-      // Отменяем предыдущую анимацию если есть
-      if (currentAnimation) {
-        currentAnimation();
-      }
-      
       isAnimating = true;
       let index = 0;
-      let animationId;
       
       function nextFrame() {
-        if (!isAnimating) return; // Проверка на отмену анимации
+        if (!isAnimating) return;
         
         if (index < sequence.length) {
-          // Принудительно скрываем изображение
-          gameImage.style.opacity = '0';
-          
-          // Принудительный reflow
-          gameImage.offsetHeight;
-          
-          // Меняем изображение (используем предзагруженное если доступно)
-          const imageKey = sequence[index];
-          if (preloadedImages[imageKey]) {
-            gameImage.src = preloadedImages[imageKey].src;
-          } else {
-            gameImage.src = images[imageKey];
-          }
-          
-          // Показываем изображение
-          gameImage.style.opacity = '1';
+          // Отрисовываем текущий кадр
+          drawImage(sequence[index]);
           
           const delay = Array.isArray(delays) ? delays[index] : delays;
-          animationId = setTimeout(nextFrame, delay);
+          setTimeout(nextFrame, delay);
           index++;
         } else {
           isAnimating = false;
-          currentAnimation = null;
           if (callback) callback();
         }
       }
       
       nextFrame();
-      
-      // Сохраняем функцию для отмены анимации
-      currentAnimation = () => {
-        if (animationId) clearTimeout(animationId);
-        isAnimating = false;
-        currentAnimation = null;
-      };
     }
 
     // Обработка клика
@@ -280,7 +286,7 @@
           animateSequence(['left1', 'left2', 'left3'], 200, () => {
             score++;
             updateScoreboard();
-            gameImage.src = images.static;
+            drawImage('static');
           });
         } else {
           animateSequence(['left1', 'left2', 'leftFail'], [200, 200, 400], () => {
@@ -293,7 +299,7 @@
           animateSequence(['right1', 'right2', 'right3'], 200, () => {
             score++;
             updateScoreboard();
-            gameImage.src = images.static;
+            drawImage('static');
           });
         } else {
           animateSequence(['right1', 'right2', 'rightFail'], [200, 200, 400], () => {
@@ -334,6 +340,12 @@
       scoreboard.style.display = 'none';
       menuButton.style.display = 'none';
       
+      // Настраиваем Canvas
+      setupCanvas();
+      
+      // Отрисовываем статичное изображение при загрузке
+      drawImage('static');
+      
       // Клик по логотипу
       document.getElementById('logo-screen').onclick = () => {
         showScreen('menu');
@@ -341,7 +353,7 @@
       
       // Клики по игровому экрану
       document.getElementById('game-screen').onclick = (e) => {
-        const rect = gameImage.getBoundingClientRect();
+        const rect = gameCanvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const side = x < rect.width / 2 ? 'left' : 'right';
         handleClick(side);
