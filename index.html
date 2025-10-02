@@ -15,7 +15,7 @@
       font-display: block;
     }
     html, body { margin:0; height:100%; background:#fff; overflow:hidden; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
-    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; transform:translateZ(0); }
+    body { display:flex; justify-content:center; align-items:center; height:100vh; font-family:'Tiny5', sans-serif; color:#000; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     .center-screen { position:fixed; inset:0; display:grid; place-items:center; }
     .logo { width:min(500px, 90vw); height:auto; image-rendering:pixelated; display:block; cursor:default; }
     .mode-menu { position:fixed; inset:0; background:#fff; display:none; align-items:center; justify-content:center; }
@@ -33,17 +33,26 @@
     .try-again.show { opacity:1; pointer-events:auto; }
     .overlay { position:fixed; inset:0; background:#fff; z-index:199; opacity:0; pointer-events:none; }
     .overlay.show { opacity:1; pointer-events:auto; }
-    .image-container { position:relative; width:min(100vw, 100vh); height:min(100vw, 100vh); max-width:600px; max-height:600px; margin:0 auto; transform:translateZ(0); }
-    .static-image { width:100%; height:100%; display:block; image-rendering:pixelated; transform:translateZ(0); }
+    .image-container { position:relative; width:min(100vw, 100vh); height:min(100vw, 100vh); max-width:600px; max-height:600px; margin:0 auto; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+    .static-image { width:100%; height:100%; display:block; image-rendering:pixelated; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     .side { position:absolute; top:0; width:50%; height:100%; cursor:pointer; }
     .left-side { left:0; } .right-side { right:0; }
-    .frame { position:absolute; top:0; left:0; width:100%; height:100%; display:none; image-rendering:pixelated; transform:translateZ(0); }
+    .frame { position:absolute; top:0; left:0; width:100%; height:100%; display:none; image-rendering:pixelated; transform:translateZ(0); -webkit-backface-visibility:hidden; backface-visibility:hidden; }
     @media (max-width:768px) {
       .scoreboard, .high-score { font-size:30px; }
       .menu-button { font-size:30px; }
       .try-again { font-size:30px; }
       .mode-option { font-size:40px; }
       .mode-options { gap:25px; }
+      
+      /* Мобильные оптимизации для устранения двоения */
+      .image-container { max-width:90vw; max-height:90vw; }
+      .static-image, .frame { 
+        -webkit-transform:translateZ(0) scale(1); 
+        transform:translateZ(0) scale(1);
+        -webkit-perspective:1000px;
+        perspective:1000px;
+      }
     }
   </style>
 </head>
@@ -192,16 +201,24 @@
         if(myToken !== sceneToken) return;
         if(i < frames.length){
           const f = frames[i];
-          // Используем visibility вместо display для лучшей производительности
+          
+          // Принудительно скрываем все кадры перед показом нового
+          for(let j = 0; j < frames.length; j++) {
+            frames[j].style.visibility = 'hidden';
+            frames[j].style.display = 'none';
+          }
+          
+          // Показываем только текущий кадр
           f.style.visibility = 'visible';
           f.style.display = 'block';
+          
+          // Принудительный reflow для устранения двоения
+          f.offsetHeight;
           
           if(i < frames.length - 1){
             const interval = Array.isArray(intervals) ? intervals[i] : intervals;
             setT(() => {
               if(myToken !== sceneToken) return;
-              f.style.visibility = 'hidden';
-              f.style.display = 'none';
               i++;
               step();
             }, interval);
@@ -232,8 +249,18 @@
       
       function step(){
         if(element && sequence && sequence.length > 0){
+          // Принудительно скрываем элемент перед сменой src
+          element.style.opacity = '0';
+          
           // Используем предзагруженное изображение
           element.src = preloadedImages[currentIndex].src;
+          
+          // Принудительный reflow
+          element.offsetHeight;
+          
+          // Показываем элемент
+          element.style.opacity = '1';
+          
           currentIndex++;
           
           if(currentIndex >= sequence.length){
@@ -258,10 +285,15 @@
     }
 
     function resetToStatic(){
+      // Принудительно скрываем все кадры
       for(let i = 0; i < frames.length; i++) {
         frames[i].style.visibility = 'hidden';
         frames[i].style.display = 'none';
       }
+      
+      // Принудительный reflow для устранения двоения
+      staticEl.offsetHeight;
+      
       staticEl.style.display='block';
       scoreEl.style.display='block';
       highScoreEl.style.display='block';
@@ -468,6 +500,25 @@
       const allElements = document.querySelectorAll('*');
       for(let i = 0; i < allElements.length; i++) {
         allElements[i].style.transform = 'translateZ(0)';
+        allElements[i].style.webkitBackfaceVisibility = 'hidden';
+        allElements[i].style.backfaceVisibility = 'hidden';
+      }
+      
+      // Специальные мобильные оптимизации
+      if(/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        // Отключаем зум на мобильных
+        document.addEventListener('gesturestart', function (e) {
+          e.preventDefault();
+        });
+        
+        // Оптимизируем рендеринг для мобильных
+        const gameElements = document.querySelectorAll('.image-container, .static-image, .frame, .logo');
+        gameElements.forEach(el => {
+          el.style.webkitTransform = 'translateZ(0) scale(1)';
+          el.style.transform = 'translateZ(0) scale(1)';
+          el.style.webkitPerspective = '1000px';
+          el.style.perspective = '1000px';
+        });
       }
     });
     
