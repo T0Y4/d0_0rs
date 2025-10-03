@@ -151,15 +151,15 @@
       const outcome = Math.floor(Math.random()*2);
       if(side==='left'){
         if(outcome===1){
-          showFrames(['left-frame-1','left-frame-2','left-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','left-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['left-frame-1','left-frame-2','negative-left-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }else{
         if(outcome===1){
-          showFrames(['right-frame-1','right-frame-2','right-frame-3'],300,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','right-frame-3'],400,()=>{ resetToStatic(); updateScore(score+1); isAnimating=false; });
         }else{
-          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[300,300,600],()=>{ showTryAgainText(); isAnimating=false; });
+          showFrames(['right-frame-1','right-frame-2','negative-right-frame'],[400,400,800],()=>{ showTryAgainText(); isAnimating=false; });
         }
       }
     }
@@ -346,7 +346,7 @@
       function animateLogo(){
         logoImg.src = logoSequence[currentIndex];
         currentIndex = (currentIndex + 1) % logoSequence.length;
-        setTimeout(animateLogo, 300);
+        setTimeout(animateLogo, 400);
       }
       
       animateLogo();
