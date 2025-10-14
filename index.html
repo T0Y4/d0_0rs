@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>DOORS</title>
+    <link rel="icon" type="image/svg+xml" href="images/logo.svg">
+    <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            /* Оптимизация для мобильных устройств */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Предотвращение зума */
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .left-zone, .right-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 10;
+            /* Убираем курсор и визуальные эффекты для мобильных устройств */
+        }
+
+        .left-zone {
+            left: 0;
+        }
+
+        .right-zone {
+            right: 0;
+        }
+
+        .game-image {
+            max-width: 90vw;
+            max-height: 90vh;
+            width: auto;
+            height: auto;
+            /* Пиксельный стиль - четкие края без сглаживания */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            /* Убираем все переходы для резких смен картинок */
+            transition: none;
+            /* Предотвращение перетаскивания */
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            z-index: 5;
+        }
+
+        /* Адаптивность для разных размеров экранов */
+        @media (max-width: 480px) {
+            .game-image {
+                max-width: 95vw;
+                max-height: 95vh;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .game-image {
+                max-width: 80vw;
+                max-height: 80vh;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .game-image {
+                max-width: 70vw;
+                max-height: 70vh;
+            }
+        }
+
+        /* Оптимизация для Telegram WebApp */
+        @media (max-height: 600px) {
+            .game-image {
+                max-height: 85vh;
+            }
+        }
+
+        /* Фон всегда белый, независимо от темы */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: white;
+            }
+        }
+
+        /* Пиксельная анимация загрузки - резкое появление */
+        .game-image {
+            animation: pixelAppear 0.1s ease-out;
+        }
+
+        @keyframes pixelAppear {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area">
+            <div class="left-zone" id="leftZone"></div>
+            <div class="right-zone" id="rightZone"></div>
+            <img 
+                src="images/2_static_image.svg" 
+                alt="Game Static Image" 
+                class="game-image"
+                id="gameImage"
+                draggable="false"
+            />
+        </div>
+    </div>
+
+    <script>
+        // Игровые константы
+        const IMAGES = {
+            static: 'images/2_static_image.svg',
+            left: {
+                positive: [
+                    'images/2_left_1.svg',
+                    'images/2_left_2.svg',
+                    'images/2_left_3.svg'
+                ],
+                negative: [
+                    'images/2_left_1.svg',
+                    'images/2_left_2.svg',
+                    'images/2_negative_left_4.svg'
+                ]
+            },
+            right: {
+                positive: [
+                    'images/2_right_1.svg',
+                    'images/2_right_2.svg',
+                    'images/2_right_3.svg'
+                ],
+                negative: [
+                    'images/2_right_1.svg',
+                    'images/2_right_2.svg',
+                    'images/2_negative_right_4.svg'
+                ]
+            }
+        };
+
+        // Состояние игры
+        let gameState = {
+            isAnimating: false,
+            currentSide: null
+        };
+
+        // Элементы DOM
+        const gameImage = document.getElementById('gameImage');
+        const leftZone = document.getElementById('leftZone');
+        const rightZone = document.getElementById('rightZone');
+
+        // Честный рандом 50/50
+        function getRandomResult() {
+            // Используем crypto.getRandomValues для криптографически стойкого рандома
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return array[0] % 2 === 0; // true = положительный, false = отрицательный
+        }
+
+        // Резкая смена картинки в пиксельном стиле
+        function changeImage(src, callback) {
+            // Мгновенная смена картинки без переходов
+            gameImage.src = src;
+            
+            // Небольшая задержка для визуального восприятия
+            setTimeout(() => {
+                if (callback) callback();
+            }, 100);
+        }
+
+        // Воспроизведение последовательности картинок в пиксельном стиле
+        function playSequence(images, callback) {
+            let currentIndex = 0;
+            
+            function playNext() {
+                if (currentIndex < images.length) {
+                    changeImage(images[currentIndex], () => {
+                        currentIndex++;
+                        // Быстрая смена картинок для пиксельного стиля
+                        setTimeout(playNext, 300);
+                    });
+                } else {
+                    if (callback) callback();
+                }
+            }
+            
+            playNext();
+        }
+
+        // Обработка клика по зоне
+        function handleZoneClick(side) {
+            if (gameState.isAnimating) return;
+            
+            gameState.isAnimating = true;
+            gameState.currentSide = side;
+            
+            // Определяем результат (50/50)
+            const isPositive = getRandomResult();
+            
+            // Выбираем последовательность картинок
+            const images = isPositive ? 
+                IMAGES[side].positive : 
+                IMAGES[side].negative;
+            
+            // Воспроизводим последовательность
+            playSequence(images, () => {
+                // Возвращаемся к статичной картинке
+                changeImage(IMAGES.static, () => {
+                    gameState.isAnimating = false;
+                    gameState.currentSide = null;
+                });
+            });
+        }
+
+        // Обработчики событий
+        leftZone.addEventListener('click', () => handleZoneClick('left'));
+        rightZone.addEventListener('click', () => handleZoneClick('right'));
+
+        // Поддержка тач-событий для мобильных устройств
+        leftZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleZoneClick('left');
+        });
+
+        rightZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleZoneClick('right');
+        });
+
+        // Оптимизация для Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            
+            // Настройка WebApp
+            tg.ready();
+            tg.expand();
+            
+            // Отключение зума
+            tg.enableClosingConfirmation();
+            
+            // Обработка изменения размера экрана
+            window.addEventListener('resize', function() {
+                tg.expand();
+            });
+        }
+
+        // Предотвращение контекстного меню на мобильных устройствах
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Оптимизация производительности
+        let ticking = false;
+        
+        function updateLayout() {
+            // Здесь будет логика обновления игры
+            ticking = false;
+        }
+
+        function requestTick() {
+            if (!ticking) {
+                requestAnimationFrame(updateLayout);
+                ticking = true;
+            }
+        }
+
+        // Обработка изменения ориентации
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                requestTick();
+            }, 100);
+        });
+
+        // Обработка изменения размера окна
+        window.addEventListener('resize', requestTick);
+    </script>
+</body>
+</html>
