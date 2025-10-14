@@ -156,6 +156,46 @@
             }
         };
 
+        // Предзагрузка всех изображений для стабильной скорости
+        const imageCache = new Map();
+        let imagesLoaded = 0;
+        const totalImages = 9; // Общее количество уникальных изображений
+
+        function preloadImages() {
+            const allImages = [
+                IMAGES.static,
+                ...IMAGES.left.positive,
+                ...IMAGES.left.negative,
+                ...IMAGES.right.positive,
+                ...IMAGES.right.negative
+            ];
+
+            // Убираем дубликаты
+            const uniqueImages = [...new Set(allImages)];
+
+            uniqueImages.forEach(src => {
+                const img = new Image();
+                img.onload = () => {
+                    imagesLoaded++;
+                    imageCache.set(src, img);
+                };
+                img.onerror = () => {
+                    console.error('Failed to load image:', src);
+                    imagesLoaded++;
+                };
+                img.src = src;
+            });
+        }
+
+        // Проверка готовности всех изображений
+        function waitForImages(callback) {
+            if (imagesLoaded >= totalImages) {
+                callback();
+            } else {
+                setTimeout(() => waitForImages(callback), 50);
+            }
+        }
+
         // Состояние игры
         let gameState = {
             isAnimating: false,
@@ -175,18 +215,25 @@
             return array[0] % 2 === 0; // true = положительный, false = отрицательный
         }
 
-        // Резкая смена картинки в пиксельном стиле
+        // Стабильная смена картинки с использованием кэша
         function changeImage(src, callback) {
-            // Мгновенная смена картинки без переходов
-            gameImage.src = src;
+            // Используем предзагруженное изображение из кэша
+            const cachedImg = imageCache.get(src);
+            if (cachedImg) {
+                // Мгновенная смена с предзагруженного изображения
+                gameImage.src = cachedImg.src;
+            } else {
+                // Fallback на случай если изображение не в кэше
+                gameImage.src = src;
+            }
             
-            // Небольшая задержка для визуального восприятия
+            // Фиксированная задержка для стабильной скорости
             setTimeout(() => {
                 if (callback) callback();
-            }, 100);
+            }, 200); // Увеличиваем до 200мс для стабильности
         }
 
-        // Воспроизведение последовательности картинок в пиксельном стиле
+        // Стабильное воспроизведение последовательности картинок
         function playSequence(images, callback) {
             let currentIndex = 0;
             
@@ -194,8 +241,8 @@
                 if (currentIndex < images.length) {
                     changeImage(images[currentIndex], () => {
                         currentIndex++;
-                        // Быстрая смена картинок для пиксельного стиля
-                        setTimeout(playNext, 300);
+                        // Фиксированная задержка для стабильной скорости на всех устройствах
+                        setTimeout(playNext, 400);
                     });
                 } else {
                     if (callback) callback();
@@ -230,20 +277,37 @@
             });
         }
 
-        // Обработчики событий
-        leftZone.addEventListener('click', () => handleZoneClick('left'));
-        rightZone.addEventListener('click', () => handleZoneClick('right'));
+        // Инициализация игры
+        function initGame() {
+            // Предзагружаем все изображения
+            preloadImages();
+            
+            // Ждем загрузки всех изображений перед активацией игры
+            waitForImages(() => {
+                console.log('All images loaded, game ready!');
+                // Игра готова к использованию
+            });
+        }
 
-        // Поддержка тач-событий для мобильных устройств
-        leftZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleZoneClick('left');
-        });
+        // Обработчики событий (активируются только после загрузки)
+        function setupEventListeners() {
+            leftZone.addEventListener('click', () => handleZoneClick('left'));
+            rightZone.addEventListener('click', () => handleZoneClick('right'));
 
-        rightZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            handleZoneClick('right');
-        });
+            // Поддержка тач-событий для мобильных устройств
+            leftZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('left');
+            });
+
+            rightZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('right');
+            });
+        }
+
+        // Настраиваем обработчики сразу
+        setupEventListeners();
 
         // Оптимизация для Telegram WebApp
         if (window.Telegram && window.Telegram.WebApp) {
@@ -291,6 +355,9 @@
 
         // Обработка изменения размера окна
         window.addEventListener('resize', requestTick);
+
+        // Запускаем инициализацию игры
+        initGame();
     </script>
 </body>
 </html>
