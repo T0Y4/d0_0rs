@@ -8,6 +8,14 @@
     <link rel="icon" type="image/svg+xml" href="images/logo.svg">
     <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
     <style>
+        @font-face {
+            font-family: 'Tiny5';
+            src: url('fonts/Tiny5-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
+    <style>
         * {
             margin: 0;
             padding: 0;
@@ -88,6 +96,151 @@
 
         /* Картинки теперь всегда на весь экран */
 
+        /* Try Again кнопка */
+        .try-again-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .try-again-overlay.show {
+            display: flex;
+        }
+
+        .try-again-text {
+            color: #000;
+            font-family: 'Tiny5', monospace;
+            font-size: 48px;
+            font-weight: normal;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            /* Пиксельный стиль */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        .try-again-text:hover {
+            opacity: 0.7;
+        }
+
+        .try-again-text:active {
+            opacity: 0.5;
+        }
+
+        /* Адаптивность для текста */
+        @media (max-width: 480px) {
+            .try-again-text {
+                font-size: 36px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .try-again-text {
+                font-size: 28px;
+            }
+        }
+
+        /* Счетчик */
+        .score-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 15;
+            font-family: 'Tiny5', monospace;
+            color: #000;
+            text-align: right;
+        }
+
+        .high-score {
+            margin-bottom: 8px;
+        }
+
+        .current-score {
+            font-size: 48px;
+        }
+
+        .score-label {
+            font-size: 48px;
+            color: #000;
+        }
+
+        .score-value {
+            font-size: 48px;
+            font-weight: normal;
+        }
+
+        .hs-number {
+            font-size: 48px;
+            font-weight: normal;
+            color: #000;
+            transform: scale(1);
+            display: inline-block;
+        }
+
+        /* Анимация для hs */
+        .hs-number.gold {
+            color: #FFD700;
+        }
+
+        .hs-number.pop {
+            transform: scale(1.35);
+        }
+
+        /* Адаптивность для счетчика */
+        @media (max-width: 480px) {
+            .score-counter {
+                top: 15px;
+                right: 15px;
+            }
+            
+            .current-score {
+                font-size: 36px;
+            }
+            
+            .score-value {
+                font-size: 36px;
+            }
+            
+            .score-label {
+                font-size: 36px;
+            }
+            
+            .hs-number {
+                font-size: 36px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .score-counter {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .current-score {
+                font-size: 28px;
+            }
+            
+            .score-value {
+                font-size: 28px;
+            }
+            
+            .score-label {
+                font-size: 28px;
+            }
+            
+            .hs-number {
+                font-size: 28px;
+            }
+        }
+
         /* Фон всегда белый, независимо от темы */
         @media (prefers-color-scheme: dark) {
             body {
@@ -119,6 +272,22 @@
                 class="game-canvas"
                 id="gameCanvas"
             ></canvas>
+            <div class="try-again-overlay" id="tryAgainOverlay">
+                <div class="try-again-text" id="tryAgainText">
+                    try again
+                </div>
+            </div>
+            
+            <!-- Счетчик -->
+            <div class="score-counter" id="scoreCounter">
+                <div class="high-score">
+                    <span class="score-label">hs:</span>
+                    <span class="hs-number" id="hsNumber">0</span>
+                </div>
+                <div class="current-score">
+                    <span class="score-value" id="currentScoreValue">0</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -242,12 +411,19 @@
             currentSide: null,
             currentFrame: 0,
             animationFrames: [],
-            animationStartTime: 0
+            animationStartTime: 0,
+            isNegativeResult: false,
+            currentScore: 0,
+            highScore: 0
         };
 
         // Элементы DOM
         const leftZone = document.getElementById('leftZone');
         const rightZone = document.getElementById('rightZone');
+        const tryAgainOverlay = document.getElementById('tryAgainOverlay');
+        const tryAgainText = document.getElementById('tryAgainText');
+        const hsNumber = document.getElementById('hsNumber');
+        const currentScoreValue = document.getElementById('currentScoreValue');
 
         // Отрисовка изображения на Canvas с ограничением размера
         function drawImage(src) {
@@ -342,14 +518,93 @@
             drawImage(src);
         }
 
+        // Показать кнопку Try Again
+        function showTryAgain() {
+            tryAgainOverlay.classList.add('show');
+        }
+
+        // Скрыть кнопку Try Again
+        function hideTryAgain() {
+            tryAgainOverlay.classList.remove('show');
+        }
+
+        // Обновить отображение счетчика
+        function updateScoreDisplay() {
+            currentScoreValue.textContent = gameState.currentScore;
+            hsNumber.textContent = gameState.highScore;
+        }
+
+        // Анимация увеличения hs
+        function celebrateHighScore() {
+            hsNumber.classList.remove('gold', 'pop');
+            void hsNumber.offsetWidth; // Принудительный reflow
+            hsNumber.classList.add('gold', 'pop');
+            setTimeout(() => { 
+                hsNumber.classList.remove('gold', 'pop'); 
+            }, 220);
+        }
+
+        // Увеличить счет
+        function increaseScore() {
+            gameState.currentScore++;
+            currentScoreValue.textContent = gameState.currentScore;
+            
+            // Обновляем hs динамически во время игры (как в оригинале)
+            if (gameState.currentScore > gameState.highScore) {
+                gameState.highScore = gameState.currentScore;
+                hsNumber.textContent = gameState.highScore;
+                // Сохраняем в localStorage
+                localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                // Запускаем анимацию
+                celebrateHighScore();
+            }
+        }
+
+        // Сбросить текущий счет
+        function resetCurrentScore() {
+            gameState.currentScore = 0;
+            updateScoreDisplay();
+        }
+
+        // Обновить лучший результат
+        function updateHighScore() {
+            if (gameState.currentScore > gameState.highScore) {
+                gameState.highScore = gameState.currentScore;
+                // Сохраняем в localStorage
+                localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                updateScoreDisplay();
+            }
+        }
+
+        // Загрузить лучший результат из localStorage
+        function loadHighScore() {
+            const savedHighScore = localStorage.getItem('doorsHighScore');
+            if (savedHighScore) {
+                gameState.highScore = parseInt(savedHighScore, 10);
+                hsNumber.textContent = gameState.highScore;
+            }
+        }
+
+        // Начать игру заново
+        function restartGame() {
+            hideTryAgain();
+            gameState.isNegativeResult = false;
+            resetCurrentScore();
+            changeImage(IMAGES.static);
+        }
+
         // Обработка клика по зоне
         function handleZoneClick(side) {
             if (gameState.isAnimating) return;
+            
+            // Скрываем кнопку Try Again если она была показана
+            hideTryAgain();
             
             gameState.currentSide = side;
             
             // Определяем результат (50/50)
             const isPositive = getRandomResult();
+            gameState.isNegativeResult = !isPositive;
             
             // Выбираем последовательность картинок
             const images = isPositive ? 
@@ -358,8 +613,15 @@
             
             // Воспроизводим последовательность
             playSequence(images, () => {
-                // Возвращаемся к статичной картинке
-                changeImage(IMAGES.static);
+                if (gameState.isNegativeResult) {
+                    // Показываем кнопку Try Again после негативного сценария
+                    showTryAgain();
+                } else {
+                    // Увеличиваем счет после позитивного сценария
+                    increaseScore();
+                    // Возвращаемся к статичной картинке после позитивного сценария
+                    changeImage(IMAGES.static);
+                }
                 gameState.currentSide = null;
             });
         }
@@ -368,6 +630,9 @@
         function initGame() {
             // Инициализируем Canvas
             initCanvas();
+            
+            // Загружаем лучший результат
+            loadHighScore();
             
             // Предзагружаем все изображения
             preloadImages();
@@ -394,6 +659,13 @@
             rightZone.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 handleZoneClick('right');
+            });
+
+            // Обработчик для всего overlay Try Again (клик в любом месте)
+            tryAgainOverlay.addEventListener('click', restartGame);
+            tryAgainOverlay.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                restartGame();
             });
         }
 
