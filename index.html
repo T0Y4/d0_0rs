@@ -125,29 +125,29 @@
     <script>
         // Игровые константы
         const IMAGES = {
-            static: 'images/2_static_image.svg',
+            static: 'images/static_image.svg',
             left: {
                 positive: [
-                    'images/2_left_1.svg',
-                    'images/2_left_2.svg',
-                    'images/2_left_3.svg'
+                    'images/left_1.svg',
+                    'images/left_2.svg',
+                    'images/left_3.svg'
                 ],
                 negative: [
-                    'images/2_left_1.svg',
-                    'images/2_left_2.svg',
-                    'images/2_negative_left_4.svg'
+                    'images/left_1.svg',
+                    'images/left_2.svg',
+                    'images/left_3_0.svg'
                 ]
             },
             right: {
                 positive: [
-                    'images/2_right_1.svg',
-                    'images/2_right_2.svg',
-                    'images/2_right_3.svg'
+                    'images/right_1.svg',
+                    'images/right_2.svg',
+                    'images/right_3.svg'
                 ],
                 negative: [
-                    'images/2_right_1.svg',
-                    'images/2_right_2.svg',
-                    'images/2_negative_right_4.svg'
+                    'images/right_1.svg',
+                    'images/right_2.svg',
+                    'images/right_3_0.svg'
                 ]
             }
         };
@@ -249,7 +249,7 @@
         const leftZone = document.getElementById('leftZone');
         const rightZone = document.getElementById('rightZone');
 
-        // Отрисовка изображения на Canvas
+        // Отрисовка изображения на Canvas с ограничением размера
         function drawImage(src) {
             const img = imageCache.get(src);
             if (!img) {
@@ -260,25 +260,39 @@
             // Очищаем Canvas
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
             
+            // Максимальный размер отображения (сохраняем качество оптимизированных картинок)
+            const maxDisplaySize = 1000;
+            
             // Вычисляем размеры для центрирования с сохранением пропорций
             const imgAspect = img.width / img.height;
             const canvasAspect = canvasWidth / canvasHeight;
             
             let drawWidth, drawHeight, drawX, drawY;
             
+            // Сначала вычисляем размеры как обычно
             if (imgAspect > canvasAspect) {
                 // Изображение шире - подгоняем по ширине
                 drawWidth = canvasWidth;
                 drawHeight = canvasWidth / imgAspect;
-                drawX = 0;
-                drawY = (canvasHeight - drawHeight) / 2;
             } else {
                 // Изображение выше - подгоняем по высоте
                 drawHeight = canvasHeight;
                 drawWidth = canvasHeight * imgAspect;
-                drawX = (canvasWidth - drawWidth) / 2;
-                drawY = 0;
             }
+            
+            // Ограничиваем максимальный размер до 1000px
+            if (drawWidth > maxDisplaySize) {
+                drawWidth = maxDisplaySize;
+                drawHeight = maxDisplaySize / imgAspect;
+            }
+            if (drawHeight > maxDisplaySize) {
+                drawHeight = maxDisplaySize;
+                drawWidth = maxDisplaySize * imgAspect;
+            }
+            
+            // Центрируем изображение
+            drawX = (canvasWidth - drawWidth) / 2;
+            drawY = (canvasHeight - drawHeight) / 2;
             
             // Отрисовываем изображение
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
