@@ -117,7 +117,7 @@
         .try-again-text {
             color: #000;
             font-family: 'Tiny5', monospace;
-            font-size: 48px;
+            font-size: 50px;
             font-weight: normal;
             cursor: pointer;
             transition: opacity 0.3s ease;
@@ -136,6 +136,12 @@
         }
 
         /* Адаптивность для текста */
+        @media (max-width: 768px) {
+            .try-again-text {
+                font-size: 40px;
+            }
+        }
+
         @media (max-width: 480px) {
             .try-again-text {
                 font-size: 36px;
@@ -144,7 +150,7 @@
 
         @media (max-width: 320px) {
             .try-again-text {
-                font-size: 28px;
+                font-size: 32px;
             }
         }
 
@@ -160,25 +166,22 @@
         }
 
         .high-score {
-            margin-bottom: 8px;
+            font-size: 50px;
         }
 
         .current-score {
-            font-size: 48px;
+            font-size: 50px;
         }
 
         .score-label {
-            font-size: 48px;
             color: #000;
         }
 
         .score-value {
-            font-size: 48px;
             font-weight: normal;
         }
 
         .hs-number {
-            font-size: 48px;
             font-weight: normal;
             color: #000;
             transform: scale(1);
@@ -195,25 +198,24 @@
         }
 
         /* Адаптивность для счетчика */
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
             .score-counter {
                 top: 15px;
                 right: 15px;
             }
             
-            .current-score {
-                font-size: 36px;
+            .high-score, .current-score {
+                font-size: 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .score-counter {
+                top: 12px;
+                right: 12px;
             }
             
-            .score-value {
-                font-size: 36px;
-            }
-            
-            .score-label {
-                font-size: 36px;
-            }
-            
-            .hs-number {
+            .high-score, .current-score {
                 font-size: 36px;
             }
         }
@@ -224,20 +226,8 @@
                 right: 10px;
             }
             
-            .current-score {
-                font-size: 28px;
-            }
-            
-            .score-value {
-                font-size: 28px;
-            }
-            
-            .score-label {
-                font-size: 28px;
-            }
-            
-            .hs-number {
-                font-size: 28px;
+            .high-score, .current-score {
+                font-size: 32px;
             }
         }
 
@@ -281,8 +271,7 @@
             <!-- Счетчик -->
             <div class="score-counter" id="scoreCounter">
                 <div class="high-score">
-                    <span class="score-label">hs:</span>
-                    <span class="hs-number" id="hsNumber">0</span>
+                    <span class="score-label">hs:</span> <span class="hs-number" id="hsNumber">0</span>
                 </div>
                 <div class="current-score">
                     <span class="score-value" id="currentScoreValue">0</span>
