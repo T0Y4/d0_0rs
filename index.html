@@ -68,22 +68,21 @@
             right: 0;
         }
 
-        .game-image {
+        .game-canvas {
             width: 100vw;
             height: 100vh;
-            object-fit: contain;
+            display: block;
             /* Пиксельный стиль - четкие края без сглаживания */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
-            /* Убираем все переходы для резких смен картинок */
+            /* Убираем все переходы */
             transition: none;
             /* Предотвращение перетаскивания */
             -webkit-user-drag: none;
             -khtml-user-drag: none;
             -moz-user-drag: none;
             -o-user-drag: none;
-            user-drag: none;
             z-index: 5;
         }
 
@@ -97,7 +96,7 @@
         }
 
         /* Пиксельная анимация загрузки - резкое появление */
-        .game-image {
+        .game-canvas {
             animation: pixelAppear 0.1s ease-out;
         }
 
@@ -116,13 +115,10 @@
         <div class="game-area">
             <div class="left-zone" id="leftZone"></div>
             <div class="right-zone" id="rightZone"></div>
-            <img 
-                src="images/2_static_image.svg" 
-                alt="Game Static Image" 
-                class="game-image"
-                id="gameImage"
-                draggable="false"
-            />
+            <canvas 
+                class="game-canvas"
+                id="gameCanvas"
+            ></canvas>
         </div>
     </div>
 
@@ -156,11 +152,54 @@
             }
         };
 
-        // Предзагрузка всех изображений для стабильной скорости
+        // Canvas система для идеальной производительности
+        let canvas, ctx;
+        let canvasWidth, canvasHeight;
+        
+        // Кэш изображений для Canvas
         const imageCache = new Map();
         let imagesLoaded = 0;
         const totalImages = 9; // Общее количество уникальных изображений
 
+        // Инициализация Canvas
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Устанавливаем размеры Canvas
+            resizeCanvas();
+            
+            // Настраиваем пиксельный рендеринг
+            ctx.imageSmoothingEnabled = false;
+            ctx.webkitImageSmoothingEnabled = false;
+            ctx.mozImageSmoothingEnabled = false;
+            ctx.msImageSmoothingEnabled = false;
+            
+            // Обработка изменения размера окна
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        // Изменение размера Canvas
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            
+            // Устанавливаем размеры Canvas
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            // Масштабируем для высоких DPI экранов
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            ctx.scale(dpr, dpr);
+            
+            // Устанавливаем CSS размеры
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+        }
+
+        // Предзагрузка всех изображений для Canvas
         function preloadImages() {
             const allImages = [
                 IMAGES.static,
@@ -178,6 +217,7 @@
                 img.onload = () => {
                     imagesLoaded++;
                     imageCache.set(src, img);
+                    console.log(`Loaded: ${src} (${imagesLoaded}/${totalImages})`);
                 };
                 img.onerror = () => {
                     console.error('Failed to load image:', src);
@@ -199,13 +239,50 @@
         // Состояние игры
         let gameState = {
             isAnimating: false,
-            currentSide: null
+            currentSide: null,
+            currentFrame: 0,
+            animationFrames: [],
+            animationStartTime: 0
         };
 
         // Элементы DOM
-        const gameImage = document.getElementById('gameImage');
         const leftZone = document.getElementById('leftZone');
         const rightZone = document.getElementById('rightZone');
+
+        // Отрисовка изображения на Canvas
+        function drawImage(src) {
+            const img = imageCache.get(src);
+            if (!img) {
+                console.error('Image not found in cache:', src);
+                return;
+            }
+
+            // Очищаем Canvas
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Вычисляем размеры для центрирования с сохранением пропорций
+            const imgAspect = img.width / img.height;
+            const canvasAspect = canvasWidth / canvasHeight;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            if (imgAspect > canvasAspect) {
+                // Изображение шире - подгоняем по ширине
+                drawWidth = canvasWidth;
+                drawHeight = canvasWidth / imgAspect;
+                drawX = 0;
+                drawY = (canvasHeight - drawHeight) / 2;
+            } else {
+                // Изображение выше - подгоняем по высоте
+                drawHeight = canvasHeight;
+                drawWidth = canvasHeight * imgAspect;
+                drawX = (canvasWidth - drawWidth) / 2;
+                drawY = 0;
+            }
+            
+            // Отрисовываем изображение
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        }
 
         // Честный рандом 50/50
         function getRandomResult() {
@@ -215,48 +292,46 @@
             return array[0] % 2 === 0; // true = положительный, false = отрицательный
         }
 
-        // Стабильная смена картинки с использованием кэша
-        function changeImage(src, callback) {
-            // Используем предзагруженное изображение из кэша
-            const cachedImg = imageCache.get(src);
-            if (cachedImg) {
-                // Мгновенная смена с предзагруженного изображения
-                gameImage.src = cachedImg.src;
-            } else {
-                // Fallback на случай если изображение не в кэше
-                gameImage.src = src;
-            }
-            
-            // Фиксированная задержка для стабильной скорости
-            setTimeout(() => {
-                if (callback) callback();
-            }, 100); // Ускоряем до 100мс
-        }
-
-        // Стабильное воспроизведение последовательности картинок
+        // Система анимации с requestAnimationFrame для идеальной производительности
         function playSequence(images, callback) {
-            let currentIndex = 0;
+            if (gameState.isAnimating) return;
             
-            function playNext() {
-                if (currentIndex < images.length) {
-                    changeImage(images[currentIndex], () => {
-                        currentIndex++;
-                        // Фиксированная задержка для стабильной скорости на всех устройствах
-                        setTimeout(playNext, 200); // Ускоряем до 200мс
-                    });
+            gameState.isAnimating = true;
+            gameState.animationFrames = images;
+            gameState.currentFrame = 0;
+            gameState.animationStartTime = performance.now();
+            
+            // Запускаем анимацию
+            animateFrame();
+            
+            function animateFrame() {
+                if (!gameState.isAnimating) return;
+                
+                const currentTime = performance.now();
+                const frameIndex = Math.floor((currentTime - gameState.animationStartTime) / 200); // 200мс на кадр
+                
+                if (frameIndex < images.length) {
+                    // Отрисовываем текущий кадр
+                    drawImage(images[frameIndex]);
+                    // Продолжаем анимацию
+                    requestAnimationFrame(animateFrame);
                 } else {
+                    // Анимация завершена
+                    gameState.isAnimating = false;
                     if (callback) callback();
                 }
             }
-            
-            playNext();
+        }
+
+        // Мгновенная смена изображения
+        function changeImage(src) {
+            drawImage(src);
         }
 
         // Обработка клика по зоне
         function handleZoneClick(side) {
             if (gameState.isAnimating) return;
             
-            gameState.isAnimating = true;
             gameState.currentSide = side;
             
             // Определяем результат (50/50)
@@ -270,22 +345,24 @@
             // Воспроизводим последовательность
             playSequence(images, () => {
                 // Возвращаемся к статичной картинке
-                changeImage(IMAGES.static, () => {
-                    gameState.isAnimating = false;
-                    gameState.currentSide = null;
-                });
+                changeImage(IMAGES.static);
+                gameState.currentSide = null;
             });
         }
 
         // Инициализация игры
         function initGame() {
+            // Инициализируем Canvas
+            initCanvas();
+            
             // Предзагружаем все изображения
             preloadImages();
             
             // Ждем загрузки всех изображений перед активацией игры
             waitForImages(() => {
                 console.log('All images loaded, game ready!');
-                // Игра готова к использованию
+                // Отображаем стартовое изображение
+                changeImage(IMAGES.static);
             });
         }
 
