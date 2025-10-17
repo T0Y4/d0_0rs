@@ -487,7 +487,23 @@
                 if (!gameState.isAnimating) return;
                 
                 const currentTime = performance.now();
-                const frameIndex = Math.floor((currentTime - gameState.animationStartTime) / 200); // 200мс на кадр
+                const elapsedTime = currentTime - gameState.animationStartTime;
+                
+                // Определяем текущий кадр с учетом разной длительности
+                let frameIndex = 0;
+                let accumulatedTime = 0;
+                
+                for (let i = 0; i < images.length; i++) {
+                    // Последний кадр в негативном сценарии показывается дольше
+                    const frameDuration = (i === images.length - 1 && gameState.isNegativeResult) ? 500 : 250;
+                    
+                    if (elapsedTime < accumulatedTime + frameDuration) {
+                        frameIndex = i;
+                        break;
+                    }
+                    accumulatedTime += frameDuration;
+                    frameIndex = i + 1;
+                }
                 
                 if (frameIndex < images.length) {
                     // Отрисовываем текущий кадр
