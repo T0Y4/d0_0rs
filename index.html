@@ -688,11 +688,77 @@
             // Отключение зума
             tg.enableClosingConfirmation();
             
+            // Попытка открыть в полноэкранном режиме
+            try {
+                // Для мобильных устройств
+                if (tg.openLink) {
+                    tg.openLink(window.location.href, { 
+                        try_instant_view: false,
+                        open_in_fullscreen: true 
+                    });
+                }
+                
+                // Альтернативный способ через Fullscreen API
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(e => {
+                        console.log('Fullscreen request failed:', e);
+                    });
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                }
+            } catch (e) {
+                console.log('Fullscreen not available:', e);
+            }
+            
             // Обработка изменения размера экрана
             window.addEventListener('resize', function() {
                 tg.expand();
             });
         }
+
+        // Функция для переключения полноэкранного режима
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                // Входим в полноэкранный режим
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                // Выходим из полноэкранного режима
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Обработчик двойного тапа для полноэкранного режима
+        let lastTap = 0;
+        document.addEventListener('touchend', function(e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                // Двойной тап - переключаем полноэкранный режим
+                e.preventDefault();
+                toggleFullscreen();
+            }
+            lastTap = currentTime;
+        });
 
         // Предотвращение контекстного меню на мобильных устройствах
         document.addEventListener('contextmenu', function(e) {
