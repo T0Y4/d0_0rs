@@ -290,6 +290,24 @@
             align-items: center;
             justify-content: center;
             height: 100%;
+            gap: 40px;
+        }
+
+        .menu-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-canvas {
+            max-width: 500px;
+            max-height: 500px;
+            width: auto;
+            height: auto;
+            /* Пиксельный стиль */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
         }
 
 
@@ -305,20 +323,47 @@
 
         /* Адаптивность для меню */
         @media (max-width: 768px) {
+            .logo-canvas {
+                max-width: 80vw;
+                max-height: 60vh;
+            }
+            
             .play-button {
                 font-size: 40px;
+            }
+            
+            .menu-content {
+                gap: 30px;
             }
         }
 
         @media (max-width: 480px) {
+            .logo-canvas {
+                max-width: 85vw;
+                max-height: 50vh;
+            }
+            
             .play-button {
                 font-size: 36px;
+            }
+            
+            .menu-content {
+                gap: 25px;
             }
         }
 
         @media (max-width: 320px) {
+            .logo-canvas {
+                max-width: 90vw;
+                max-height: 40vh;
+            }
+            
             .play-button {
                 font-size: 32px;
+            }
+            
+            .menu-content {
+                gap: 20px;
             }
         }
 
@@ -376,6 +421,9 @@
         <!-- Страница меню -->
         <div class="menu-screen" id="menuScreen">
             <div class="menu-content">
+                <div class="menu-logo">
+                    <canvas id="logoCanvas" class="logo-canvas"></canvas>
+                </div>
                 <div class="play-button" id="playButton">play</div>
             </div>
         </div>
@@ -385,6 +433,7 @@
         // Игровые константы
         const IMAGES = {
             static: 'images/static_image.svg',
+            logo: 'images/logo.svg',
             left: {
                 positive: [
                     'images/left_1.svg',
@@ -414,11 +463,13 @@
         // Canvas система для идеальной производительности
         let canvas, ctx;
         let canvasWidth, canvasHeight;
+        let logoCanvas, logoCtx;
+        let logoCanvasWidth, logoCanvasHeight;
         
         // Кэш изображений для Canvas
         const imageCache = new Map();
         let imagesLoaded = 0;
-        const totalImages = 9; // Общее количество уникальных изображений
+        const totalImages = 10; // Общее количество уникальных изображений (включая логотип)
 
         // Инициализация Canvas
         function initCanvas() {
@@ -436,6 +487,24 @@
             
             // Обработка изменения размера окна
             window.addEventListener('resize', resizeCanvas);
+        }
+
+        // Инициализация Canvas для логотипа
+        function initLogoCanvas() {
+            logoCanvas = document.getElementById('logoCanvas');
+            logoCtx = logoCanvas.getContext('2d');
+            
+            // Устанавливаем размеры Canvas для логотипа
+            resizeLogoCanvas();
+            
+            // Настраиваем пиксельный рендеринг
+            logoCtx.imageSmoothingEnabled = false;
+            logoCtx.webkitImageSmoothingEnabled = false;
+            logoCtx.mozImageSmoothingEnabled = false;
+            logoCtx.msImageSmoothingEnabled = false;
+            
+            // Обработка изменения размера окна
+            window.addEventListener('resize', resizeLogoCanvas);
         }
 
         // Изменение размера Canvas
@@ -458,10 +527,43 @@
             canvas.style.height = canvasHeight + 'px';
         }
 
+        // Изменение размера Canvas для логотипа
+        function resizeLogoCanvas() {
+            // Определяем размеры в зависимости от размера экрана
+            const screenWidth = window.innerWidth;
+            let canvasSize = 500; // Максимум 500x500
+            
+            if (screenWidth <= 320) {
+                canvasSize = Math.min(320 * 0.9, 500); // 90vw на маленьких экранах
+            } else if (screenWidth <= 480) {
+                canvasSize = Math.min(480 * 0.85, 500); // 85vw на мобильных
+            } else if (screenWidth <= 768) {
+                canvasSize = Math.min(768 * 0.8, 500); // 80vw на планшетах
+            }
+            
+            logoCanvasWidth = canvasSize;
+            logoCanvasHeight = canvasSize;
+            
+            // Устанавливаем размеры Canvas для логотипа
+            logoCanvas.width = logoCanvasWidth;
+            logoCanvas.height = logoCanvasHeight;
+            
+            // Масштабируем для высоких DPI экранов
+            const dpr = window.devicePixelRatio || 1;
+            logoCanvas.width = logoCanvasWidth * dpr;
+            logoCanvas.height = logoCanvasHeight * dpr;
+            logoCtx.scale(dpr, dpr);
+            
+            // Устанавливаем CSS размеры
+            logoCanvas.style.width = logoCanvasWidth + 'px';
+            logoCanvas.style.height = logoCanvasHeight + 'px';
+        }
+
         // Предзагрузка всех изображений для Canvas
         function preloadImages() {
             const allImages = [
                 IMAGES.static,
+                IMAGES.logo,
                 ...IMAGES.left.positive,
                 ...IMAGES.left.negative,
                 ...IMAGES.right.positive,
@@ -565,6 +667,55 @@
             
             // Отрисовываем изображение
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        }
+
+        // Отрисовка логотипа на Canvas
+        function drawLogo() {
+            const img = imageCache.get(IMAGES.logo);
+            if (!img || !logoCanvas || !logoCtx) {
+                console.error('Logo not found in cache or canvas not initialized');
+                return;
+            }
+
+            // Очищаем Canvas логотипа
+            logoCtx.clearRect(0, 0, logoCanvasWidth, logoCanvasHeight);
+            
+            // Максимальный размер отображения
+            const maxDisplaySize = 500;
+            
+            // Вычисляем размеры для центрирования с сохранением пропорций
+            const imgAspect = img.width / img.height;
+            const canvasAspect = logoCanvasWidth / logoCanvasHeight;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            // Сначала вычисляем размеры как обычно
+            if (imgAspect > canvasAspect) {
+                // Изображение шире - подгоняем по ширине
+                drawWidth = logoCanvasWidth;
+                drawHeight = logoCanvasWidth / imgAspect;
+            } else {
+                // Изображение выше - подгоняем по высоте
+                drawHeight = logoCanvasHeight;
+                drawWidth = logoCanvasHeight * imgAspect;
+            }
+            
+            // Ограничиваем максимальный размер до 500px
+            if (drawWidth > maxDisplaySize) {
+                drawWidth = maxDisplaySize;
+                drawHeight = maxDisplaySize / imgAspect;
+            }
+            if (drawHeight > maxDisplaySize) {
+                drawHeight = maxDisplaySize;
+                drawWidth = maxDisplaySize * imgAspect;
+            }
+            
+            // Центрируем изображение
+            drawX = (logoCanvasWidth - drawWidth) / 2;
+            drawY = (logoCanvasHeight - drawHeight) / 2;
+            
+            // Отрисовываем логотип
+            logoCtx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
         }
 
         // Честный рандом 50/50
@@ -763,6 +914,9 @@
             // Инициализируем Canvas
             initCanvas();
             
+            // Инициализируем Canvas для логотипа
+            initLogoCanvas();
+            
             // Загружаем лучший результат
             loadHighScore();
             
@@ -772,6 +926,8 @@
             // Ждем загрузки всех изображений перед активацией игры
             waitForImages(() => {
                 console.log('All images loaded, game ready!');
+                // Отрисовываем логотип
+                drawLogo();
                 // Показываем меню при загрузке
                 showMenu();
             });
@@ -807,9 +963,9 @@
                 showMenu();
             });
 
-            // Обработчики для кнопки play
-            playButton.addEventListener('click', startGame);
-            playButton.addEventListener('touchstart', (e) => {
+            // Обработчики для всего меню (клик в любом месте)
+            menuScreen.addEventListener('click', startGame);
+            menuScreen.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 startGame();
             });
