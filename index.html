@@ -507,6 +507,7 @@
             window.addEventListener('resize', resizeLogoCanvas);
         }
 
+
         // Изменение размера Canvas
         function resizeCanvas() {
             canvasWidth = window.innerWidth;
@@ -531,18 +532,25 @@
         function resizeLogoCanvas() {
             // Определяем размеры в зависимости от размера экрана
             const screenWidth = window.innerWidth;
-            let canvasSize = 500; // Максимум 500x500
+            const screenHeight = window.innerHeight;
+            
+            // Максимальные размеры для логотипа
+            let maxWidth = 500;
+            let maxHeight = 500;
             
             if (screenWidth <= 320) {
-                canvasSize = Math.min(320 * 0.9, 500); // 90vw на маленьких экранах
+                maxWidth = Math.min(320 * 0.9, 500);
+                maxHeight = Math.min(screenHeight * 0.4, 500);
             } else if (screenWidth <= 480) {
-                canvasSize = Math.min(480 * 0.85, 500); // 85vw на мобильных
+                maxWidth = Math.min(480 * 0.85, 500);
+                maxHeight = Math.min(screenHeight * 0.5, 500);
             } else if (screenWidth <= 768) {
-                canvasSize = Math.min(768 * 0.8, 500); // 80vw на планшетах
+                maxWidth = Math.min(768 * 0.8, 500);
+                maxHeight = Math.min(screenHeight * 0.6, 500);
             }
             
-            logoCanvasWidth = canvasSize;
-            logoCanvasHeight = canvasSize;
+            logoCanvasWidth = maxWidth;
+            logoCanvasHeight = maxHeight;
             
             // Устанавливаем размеры Canvas для логотипа
             logoCanvas.width = logoCanvasWidth;
@@ -558,6 +566,7 @@
             logoCanvas.style.width = logoCanvasWidth + 'px';
             logoCanvas.style.height = logoCanvasHeight + 'px';
         }
+
 
         // Предзагрузка всех изображений для Canvas
         function preloadImages() {
@@ -631,8 +640,8 @@
             // Очищаем Canvas
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
             
-            // Максимальный размер отображения (сохраняем качество оптимизированных картинок)
-            const maxDisplaySize = 1000;
+            // Максимальный размер отображения (500px для логотипа, 1000px для остальных)
+            const maxDisplaySize = (src === IMAGES.logo) ? 500 : 1000;
             
             // Вычисляем размеры для центрирования с сохранением пропорций
             const imgAspect = img.width / img.height;
@@ -651,7 +660,7 @@
                 drawWidth = canvasHeight * imgAspect;
             }
             
-            // Ограничиваем максимальный размер до 1000px
+            // Ограничиваем максимальный размер
             if (drawWidth > maxDisplaySize) {
                 drawWidth = maxDisplaySize;
                 drawHeight = maxDisplaySize / imgAspect;
