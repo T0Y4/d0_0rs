@@ -807,9 +807,9 @@
                 showMenu();
             });
 
-            // Обработчики для кнопки play
-            playButton.addEventListener('click', startGame);
-            playButton.addEventListener('touchstart', (e) => {
+            // Обработчики для всего меню (клик в любом месте)
+            menuScreen.addEventListener('click', startGame);
+            menuScreen.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 startGame();
             });
