@@ -163,6 +163,14 @@
             font-family: 'Tiny5', monospace;
             color: #000;
             text-align: right;
+            opacity: 0;
+            pointer-events: none;
+            transition: none;
+        }
+
+        .score-counter.show {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         /* Меню */
@@ -175,6 +183,14 @@
             font-size: 50px;
             color: #000;
             cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: none;
+        }
+
+        .menu-button.show {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .high-score {
@@ -697,6 +713,8 @@
         // Показать меню
         function showMenu() {
             menuScreen.classList.add('show');
+            // Скрываем элементы интерфейса игры
+            hideGameUI();
         }
 
         // Скрыть меню
@@ -704,11 +722,25 @@
             menuScreen.classList.remove('show');
         }
 
+        // Показать элементы интерфейса
+        function showGameUI() {
+            menuButton.classList.add('show');
+            document.getElementById('scoreCounter').classList.add('show');
+        }
+
+        // Скрыть элементы интерфейса
+        function hideGameUI() {
+            menuButton.classList.remove('show');
+            document.getElementById('scoreCounter').classList.remove('show');
+        }
+
         // Начать игру
         function startGame() {
             hideMenu();
             // Скрываем overlay "try again" если он был показан
             hideTryAgain();
+            // Показываем элементы интерфейса игры
+            showGameUI();
             // Сбрасываем счет и состояние игры
             resetCurrentScore();
             gameState.isNegativeResult = false;
