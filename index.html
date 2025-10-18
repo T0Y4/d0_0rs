@@ -715,6 +715,10 @@
             menuScreen.classList.add('show');
             // Скрываем элементы интерфейса игры
             hideGameUI();
+            // Очищаем canvas чтобы избежать двоения
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            }
         }
 
         // Скрыть меню
