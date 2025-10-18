@@ -743,6 +743,10 @@
             hideMenu();
             // Скрываем overlay "try again" если он был показан
             hideTryAgain();
+            // Очищаем canvas перед началом игры
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            }
             // Показываем элементы интерфейса игры
             showGameUI();
             // Сбрасываем счет и состояние игры
