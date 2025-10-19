@@ -30,14 +30,12 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            /* Оптимизация для мобильных устройств */
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             -khtml-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            /* Предотвращение зума */
             touch-action: manipulation;
         }
 
@@ -65,7 +63,6 @@
             height: 100%;
             width: 50%;
             z-index: 10;
-            /* Убираем курсор и визуальные эффекты для мобильных устройств */
         }
 
         .left-zone {
@@ -80,23 +77,16 @@
             width: 100vw;
             height: 100vh;
             display: block;
-            /* Пиксельный стиль - четкие края без сглаживания */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
-            /* Убираем все переходы */
             transition: none;
-            /* Предотвращение перетаскивания */
             -webkit-user-drag: none;
             -khtml-user-drag: none;
             -moz-user-drag: none;
             -o-user-drag: none;
             z-index: 5;
         }
-
-        /* Картинки теперь всегда на весь экран */
-
-        /* Try Again кнопка */
         .try-again-overlay {
             position: absolute;
             top: 0;
@@ -121,7 +111,6 @@
             font-weight: normal;
             cursor: pointer;
             transition: opacity 0.3s ease;
-            /* Пиксельный стиль */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
@@ -134,8 +123,6 @@
         .try-again-text:active {
             opacity: 0.5;
         }
-
-        /* Адаптивность для текста */
         @media (max-width: 768px) {
             .try-again-text {
                 font-size: 40px;
@@ -154,7 +141,6 @@
             }
         }
 
-        /* Счетчик */
         .score-counter {
             position: absolute;
             top: 50px;
@@ -173,7 +159,6 @@
             pointer-events: auto;
         }
 
-        /* Меню */
         .menu-button {
             position: absolute;
             top: 50px;
@@ -216,7 +201,6 @@
             display: inline-block;
         }
 
-        /* Анимация для hs */
         .hs-number.gold {
             color: #FFD700;
         }
@@ -224,8 +208,6 @@
         .hs-number.pop {
             transform: scale(1.35);
         }
-
-        /* Адаптивность для счетчика и меню */
         @media (max-width: 768px) {
             .score-counter {
                 top: 30px;
@@ -291,13 +273,14 @@
             z-index: 30;
             opacity: 0;
             pointer-events: none;
-            /* Резкие переходы - без плавности */
             transition: none;
+            visibility: hidden;
         }
 
         .menu-screen.show {
             opacity: 1;
             pointer-events: auto;
+            visibility: visible;
         }
 
         .menu-content {
@@ -315,11 +298,9 @@
             color: #000;
             cursor: pointer;
             text-align: center;
-            /* Резкие переходы */
             transition: none;
         }
 
-        /* Адаптивность для меню */
         @media (max-width: 768px) {
             .play-button {
                 font-size: 40px;
@@ -338,14 +319,12 @@
             }
         }
 
-        /* Фон всегда белый, независимо от темы */
         @media (prefers-color-scheme: dark) {
             body {
                 background: white;
             }
         }
 
-        /* Пиксельная анимация загрузки - резкое появление */
         .game-canvas {
             animation: pixelAppear 0.1s ease-out;
         }
@@ -375,7 +354,6 @@
                 </div>
             </div>
             
-            <!-- Счетчик -->
             <div class="score-counter" id="scoreCounter">
                 <div class="high-score">
                     <span class="score-label">hs:</span> <span class="hs-number" id="hsNumber">0</span>
@@ -385,11 +363,9 @@
                 </div>
             </div>
             
-            <!-- Меню -->
             <div class="menu-button" id="menuButton">menu</div>
         </div>
         
-        <!-- Страница меню -->
         <div class="menu-screen" id="menuScreen">
             <div class="menu-content">
                 <div class="play-button" id="playButton">play</div>
@@ -398,7 +374,6 @@
     </div>
 
     <script>
-        // Игровые константы
         const IMAGES = {
             static: 'images/static_image.svg',
             left: {
@@ -511,7 +486,6 @@
             }
         }
 
-        // Состояние игры
         let gameState = {
             isAnimating: false,
             currentSide: null,
@@ -523,7 +497,6 @@
             highScore: 0
         };
 
-        // Элементы DOM
         const leftZone = document.getElementById('leftZone');
         const rightZone = document.getElementById('rightZone');
         const tryAgainOverlay = document.getElementById('tryAgainOverlay');
@@ -534,7 +507,6 @@
         const menuScreen = document.getElementById('menuScreen');
         const playButton = document.getElementById('playButton');
 
-        // Отрисовка изображения на Canvas с ограничением размера
         function drawImage(src) {
             const img = imageCache.get(src);
             if (!img) {
@@ -542,30 +514,23 @@
                 return;
             }
 
-            // Очищаем Canvas
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
             
-            // Максимальный размер отображения (сохраняем качество оптимизированных картинок)
             const maxDisplaySize = 1000;
             
-            // Вычисляем размеры для центрирования с сохранением пропорций
             const imgAspect = img.width / img.height;
             const canvasAspect = canvasWidth / canvasHeight;
             
             let drawWidth, drawHeight, drawX, drawY;
             
-            // Сначала вычисляем размеры как обычно
             if (imgAspect > canvasAspect) {
-                // Изображение шире - подгоняем по ширине
                 drawWidth = canvasWidth;
                 drawHeight = canvasWidth / imgAspect;
             } else {
-                // Изображение выше - подгоняем по высоте
                 drawHeight = canvasHeight;
                 drawWidth = canvasHeight * imgAspect;
             }
             
-            // Ограничиваем максимальный размер до 1000px
             if (drawWidth > maxDisplaySize) {
                 drawWidth = maxDisplaySize;
                 drawHeight = maxDisplaySize / imgAspect;
@@ -575,23 +540,18 @@
                 drawWidth = maxDisplaySize * imgAspect;
             }
             
-            // Центрируем изображение
             drawX = (canvasWidth - drawWidth) / 2;
             drawY = (canvasHeight - drawHeight) / 2;
             
-            // Отрисовываем изображение
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
         }
 
-        // Честный рандом 50/50
         function getRandomResult() {
-            // Используем crypto.getRandomValues для криптографически стойкого рандома
             const array = new Uint32Array(1);
             crypto.getRandomValues(array);
-            return array[0] % 2 === 0; // true = положительный, false = отрицательный
+            return array[0] % 2 === 0;
         }
 
-        // Система анимации с requestAnimationFrame для идеальной производительности
         function playSequence(images, callback) {
             if (gameState.isAnimating) return;
             
@@ -600,7 +560,6 @@
             gameState.currentFrame = 0;
             gameState.animationStartTime = performance.now();
             
-            // Запускаем анимацию
             animateFrame();
             
             function animateFrame() {
@@ -609,12 +568,10 @@
                 const currentTime = performance.now();
                 const elapsedTime = currentTime - gameState.animationStartTime;
                 
-                // Определяем текущий кадр с учетом разной длительности
                 let frameIndex = 0;
                 let accumulatedTime = 0;
                 
                 for (let i = 0; i < images.length; i++) {
-                    // Последний кадр в негативном сценарии показывается дольше
                     const frameDuration = (i === images.length - 1 && gameState.isNegativeResult) ? 500 : 250;
                     
                     if (elapsedTime < accumulatedTime + frameDuration) {
@@ -626,82 +583,66 @@
                 }
                 
                 if (frameIndex < images.length) {
-                    // Отрисовываем текущий кадр
                     drawImage(images[frameIndex]);
-                    // Продолжаем анимацию
                     requestAnimationFrame(animateFrame);
                 } else {
-                    // Анимация завершена
                     gameState.isAnimating = false;
                     if (callback) callback();
                 }
             }
         }
 
-        // Мгновенная смена изображения
         function changeImage(src) {
             drawImage(src);
         }
 
-        // Показать кнопку Try Again
         function showTryAgain() {
             tryAgainOverlay.classList.add('show');
         }
 
-        // Скрыть кнопку Try Again
         function hideTryAgain() {
             tryAgainOverlay.classList.remove('show');
         }
 
-        // Обновить отображение счетчика
         function updateScoreDisplay() {
             currentScoreValue.textContent = gameState.currentScore;
             hsNumber.textContent = gameState.highScore;
         }
 
-        // Анимация увеличения hs
         function celebrateHighScore() {
             hsNumber.classList.remove('gold', 'pop');
-            void hsNumber.offsetWidth; // Принудительный reflow
+            void hsNumber.offsetWidth;
             hsNumber.classList.add('gold', 'pop');
             setTimeout(() => { 
                 hsNumber.classList.remove('gold', 'pop'); 
             }, 220);
         }
 
-        // Увеличить счет
         function increaseScore() {
             gameState.currentScore++;
             currentScoreValue.textContent = gameState.currentScore;
             
-            // Обновляем hs динамически во время игры (как в оригинале)
             if (gameState.currentScore > gameState.highScore) {
                 gameState.highScore = gameState.currentScore;
                 hsNumber.textContent = gameState.highScore;
-                // Сохраняем в localStorage
                 localStorage.setItem('doorsHighScore', gameState.highScore.toString());
-                // Запускаем анимацию
                 celebrateHighScore();
             }
         }
 
-        // Сбросить текущий счет
         function resetCurrentScore() {
             gameState.currentScore = 0;
             updateScoreDisplay();
         }
 
-        // Обновить лучший результат
         function updateHighScore() {
             if (gameState.currentScore > gameState.highScore) {
                 gameState.highScore = gameState.currentScore;
-                // Сохраняем в localStorage
                 localStorage.setItem('doorsHighScore', gameState.highScore.toString());
                 updateScoreDisplay();
             }
         }
 
-        // Загрузить лучший результат из localStorage
         function loadHighScore() {
             const savedHighScore = localStorage.getItem('doorsHighScore');
             if (savedHighScore) {
@@ -710,54 +651,49 @@
             }
         }
 
-        // Показать меню
         function showMenu() {
-            menuScreen.classList.add('show');
-            // Скрываем элементы интерфейса игры
-            hideGameUI();
-            // Очищаем canvas чтобы избежать двоения
             if (ctx) {
                 ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                ctx.save();
+                ctx.restore();
             }
+            hideGameUI();
+            menuScreen.classList.add('show');
         }
 
-        // Скрыть меню
         function hideMenu() {
             menuScreen.classList.remove('show');
         }
 
-        // Показать элементы интерфейса
         function showGameUI() {
             menuButton.classList.add('show');
             document.getElementById('scoreCounter').classList.add('show');
         }
 
-        // Скрыть элементы интерфейса
         function hideGameUI() {
             menuButton.classList.remove('show');
             document.getElementById('scoreCounter').classList.remove('show');
         }
 
-        // Начать игру
         function startGame() {
             hideMenu();
-            // Скрываем overlay "try again" если он был показан
             hideTryAgain();
-            // Очищаем canvas перед началом игры
             if (ctx) {
                 ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                ctx.save();
+                ctx.restore();
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
             }
-            // Показываем элементы интерфейса игры
             showGameUI();
-            // Сбрасываем счет и состояние игры
             resetCurrentScore();
             gameState.isNegativeResult = false;
             gameState.isAnimating = false;
-            // Показываем статичное изображение
-            changeImage(IMAGES.static);
+            setTimeout(() => {
+                changeImage(IMAGES.static);
+            }, 10);
         }
 
-        // Начать игру заново
         function restartGame() {
             hideTryAgain();
             gameState.isNegativeResult = false;
@@ -765,64 +701,48 @@
             changeImage(IMAGES.static);
         }
 
-        // Обработка клика по зоне
         function handleZoneClick(side) {
             if (gameState.isAnimating) return;
             
-            // Скрываем кнопку Try Again если она была показана
             hideTryAgain();
             
             gameState.currentSide = side;
             
-            // Определяем результат (50/50)
             const isPositive = getRandomResult();
             gameState.isNegativeResult = !isPositive;
             
-            // Выбираем последовательность картинок
             const images = isPositive ? 
                 IMAGES[side].positive : 
                 IMAGES[side].negative;
             
-            // Воспроизводим последовательность
             playSequence(images, () => {
                 if (gameState.isNegativeResult) {
-                    // Показываем кнопку Try Again после негативного сценария
                     showTryAgain();
                 } else {
-                    // Увеличиваем счет после позитивного сценария
                     increaseScore();
-                    // Возвращаемся к статичной картинке после позитивного сценария
                     changeImage(IMAGES.static);
                 }
                 gameState.currentSide = null;
             });
         }
 
-        // Инициализация игры
         function initGame() {
-            // Инициализируем Canvas
             initCanvas();
             
-            // Загружаем лучший результат
             loadHighScore();
             
-            // Предзагружаем все изображения
             preloadImages();
             
-            // Ждем загрузки всех изображений перед активацией игры
             waitForImages(() => {
                 console.log('All images loaded, game ready!');
-                // Показываем меню при загрузке
                 showMenu();
             });
         }
 
-        // Обработчики событий (активируются только после загрузки)
         function setupEventListeners() {
             leftZone.addEventListener('click', () => handleZoneClick('left'));
             rightZone.addEventListener('click', () => handleZoneClick('right'));
 
-            // Поддержка тач-событий для мобильных устройств
             leftZone.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 handleZoneClick('left');
@@ -833,21 +753,18 @@
                 handleZoneClick('right');
             });
 
-            // Обработчик для всего overlay Try Again (клик в любом месте)
             tryAgainOverlay.addEventListener('click', restartGame);
             tryAgainOverlay.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 restartGame();
             });
 
-            // Обработчики для меню
             menuButton.addEventListener('click', showMenu);
             menuButton.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 showMenu();
             });
 
-            // Обработчики для всего меню (клик в любом месте)
             menuScreen.addEventListener('click', startGame);
             menuScreen.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -856,36 +773,28 @@
 
         }
 
-        // Настраиваем обработчики сразу
         setupEventListeners();
 
-        // Оптимизация для Telegram WebApp
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             
-            // Настройка WebApp
             tg.ready();
             tg.expand();
             
-            // Отключение зума
             tg.enableClosingConfirmation();
             
-            // Обработка изменения размера экрана
             window.addEventListener('resize', function() {
                 tg.expand();
             });
         }
 
-        // Предотвращение контекстного меню на мобильных устройствах
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
         });
 
-        // Оптимизация производительности
         let ticking = false;
         
         function updateLayout() {
-            // Здесь будет логика обновления игры
             ticking = false;
         }
 
@@ -896,17 +805,14 @@
             }
         }
 
-        // Обработка изменения ориентации
         window.addEventListener('orientationchange', function() {
             setTimeout(function() {
                 requestTick();
             }, 100);
         });
 
-        // Обработка изменения размера окна
         window.addEventListener('resize', requestTick);
 
-        // Запускаем инициализацию игры
         initGame();
     </script>
 </body>
