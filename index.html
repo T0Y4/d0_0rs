@@ -86,6 +86,9 @@
             -moz-user-drag: none;
             -o-user-drag: none;
             z-index: 5;
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
         .try-again-overlay {
             position: absolute;
@@ -271,16 +274,15 @@
             align-items: center;
             justify-content: center;
             z-index: 30;
-            opacity: 0;
-            pointer-events: none;
+            transform: translateX(-100%);
             transition: none;
-            visibility: hidden;
+            will-change: transform;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
 
         .menu-screen.show {
-            opacity: 1;
-            pointer-events: auto;
-            visibility: visible;
+            transform: translateX(0);
         }
 
         .menu-content {
@@ -658,7 +660,9 @@
                 ctx.restore();
             }
             hideGameUI();
-            menuScreen.classList.add('show');
+            requestAnimationFrame(() => {
+                menuScreen.classList.add('show');
+            });
         }
 
         function hideMenu() {
@@ -666,8 +670,10 @@
         }
 
         function showGameUI() {
-            menuButton.classList.add('show');
-            document.getElementById('scoreCounter').classList.add('show');
+            requestAnimationFrame(() => {
+                menuButton.classList.add('show');
+                document.getElementById('scoreCounter').classList.add('show');
+            });
         }
 
         function hideGameUI() {
@@ -685,13 +691,13 @@
                 ctx.fillStyle = 'white';
                 ctx.fillRect(0, 0, canvasWidth, canvasHeight);
             }
-            showGameUI();
             resetCurrentScore();
             gameState.isNegativeResult = false;
             gameState.isAnimating = false;
-            setTimeout(() => {
+            showGameUI();
+            requestAnimationFrame(() => {
                 changeImage(IMAGES.static);
-            }, 10);
+            });
         }
 
         function restartGame() {
