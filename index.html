@@ -46,12 +46,6 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
         }
 
         .game-area {
@@ -92,13 +86,8 @@
             -moz-user-drag: none;
             -o-user-drag: none;
             z-index: 5;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
         }
+
         .try-again-overlay {
             position: absolute;
             top: 0;
@@ -135,6 +124,7 @@
         .try-again-text:active {
             opacity: 0.5;
         }
+
         @media (max-width: 768px) {
             .try-again-text {
                 font-size: 40px;
@@ -161,45 +151,6 @@
             font-family: 'Tiny5', monospace;
             color: #000;
             text-align: right;
-            opacity: 0;
-            pointer-events: none;
-            transition: none;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-
-        .score-counter.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .menu-button {
-            position: absolute;
-            top: 50px;
-            left: 50px;
-            z-index: 25;
-            font-family: 'Tiny5', monospace;
-            font-size: 50px;
-            color: #000;
-            cursor: pointer;
-            opacity: 0;
-            pointer-events: none;
-            transition: none;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-
-        .menu-button.show {
-            opacity: 1;
-            pointer-events: auto;
         }
 
         .high-score {
@@ -232,16 +183,11 @@
         .hs-number.pop {
             transform: scale(1.35);
         }
+
         @media (max-width: 768px) {
             .score-counter {
                 top: 30px;
                 right: 30px;
-            }
-            
-            .menu-button {
-                top: 30px;
-                left: 30px;
-                font-size: 40px;
             }
             
             .high-score, .current-score {
@@ -255,12 +201,6 @@
                 right: 25px;
             }
             
-            .menu-button {
-                top: 25px;
-                left: 25px;
-                font-size: 36px;
-            }
-            
             .high-score, .current-score {
                 font-size: 36px;
             }
@@ -272,79 +212,7 @@
                 right: 20px;
             }
             
-            .menu-button {
-                top: 20px;
-                left: 20px;
-                font-size: 32px;
-            }
-            
             .high-score, .current-score {
-                font-size: 32px;
-            }
-        }
-
-        /* Страница меню */
-        .menu-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 30;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-
-        .menu-screen.show {
-            display: flex;
-        }
-
-        .menu-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-
-
-        .play-button {
-            font-family: 'Tiny5', monospace;
-            font-size: 50px;
-            color: #000;
-            cursor: pointer;
-            text-align: center;
-            transition: none;
-            transform: translateZ(0);
-            contain: layout style paint;
-            isolation: isolate;
-            -webkit-transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-
-        @media (max-width: 768px) {
-            .play-button {
-                font-size: 40px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .play-button {
-                font-size: 36px;
-            }
-        }
-
-        @media (max-width: 320px) {
-            .play-button {
                 font-size: 32px;
             }
         }
@@ -384,6 +252,7 @@
                 </div>
             </div>
             
+            <!-- Счетчик -->
             <div class="score-counter" id="scoreCounter">
                 <div class="high-score">
                     <span class="score-label">hs:</span> <span class="hs-number" id="hsNumber">0</span>
@@ -391,14 +260,6 @@
                 <div class="current-score">
                     <span class="score-value" id="currentScoreValue">0</span>
                 </div>
-            </div>
-            
-            <div class="menu-button" id="menuButton">menu</div>
-        </div>
-        
-        <div class="menu-screen" id="menuScreen">
-            <div class="menu-content">
-                <div class="play-button" id="playButton">play</div>
             </div>
         </div>
     </div>
@@ -432,54 +293,43 @@
             }
         };
 
-        // Canvas система для идеальной производительности
         let canvas, ctx;
         let canvasWidth, canvasHeight;
         
-        // Кэш изображений для Canvas
         const imageCache = new Map();
         let imagesLoaded = 0;
-        const totalImages = 9; // Общее количество уникальных изображений
+        const totalImages = 9;
 
-        // Инициализация Canvas
         function initCanvas() {
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
             
-            // Устанавливаем размеры Canvas
             resizeCanvas();
             
-            // Настраиваем пиксельный рендеринг
             ctx.imageSmoothingEnabled = false;
             ctx.webkitImageSmoothingEnabled = false;
             ctx.mozImageSmoothingEnabled = false;
             ctx.msImageSmoothingEnabled = false;
             
-            // Обработка изменения размера окна
             window.addEventListener('resize', resizeCanvas);
         }
 
-        // Изменение размера Canvas
         function resizeCanvas() {
             canvasWidth = window.innerWidth;
             canvasHeight = window.innerHeight;
             
-            // Устанавливаем размеры Canvas
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
             
-            // Масштабируем для высоких DPI экранов
             const dpr = window.devicePixelRatio || 1;
             canvas.width = canvasWidth * dpr;
             canvas.height = canvasHeight * dpr;
             ctx.scale(dpr, dpr);
             
-            // Устанавливаем CSS размеры
             canvas.style.width = canvasWidth + 'px';
             canvas.style.height = canvasHeight + 'px';
         }
 
-        // Предзагрузка всех изображений для Canvas
         function preloadImages() {
             const allImages = [
                 IMAGES.static,
@@ -533,9 +383,6 @@
         const tryAgainText = document.getElementById('tryAgainText');
         const hsNumber = document.getElementById('hsNumber');
         const currentScoreValue = document.getElementById('currentScoreValue');
-        const menuButton = document.getElementById('menuButton');
-        const menuScreen = document.getElementById('menuScreen');
-        const playButton = document.getElementById('playButton');
 
         function drawImage(src) {
             const img = imageCache.get(src);
@@ -681,43 +528,6 @@
             }
         }
 
-        function showMenu() {
-            if (ctx) {
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            }
-            hideGameUI();
-            menuScreen.classList.add('show');
-        }
-
-        function hideMenu() {
-            menuScreen.classList.remove('show');
-        }
-
-        function showGameUI() {
-            menuButton.classList.add('show');
-            document.getElementById('scoreCounter').classList.add('show');
-        }
-
-        function hideGameUI() {
-            menuButton.classList.remove('show');
-            document.getElementById('scoreCounter').classList.remove('show');
-        }
-
-        function startGame() {
-            hideMenu();
-            hideTryAgain();
-            if (ctx) {
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-            }
-            resetCurrentScore();
-            gameState.isNegativeResult = false;
-            gameState.isAnimating = false;
-            showGameUI();
-            changeImage(IMAGES.static);
-        }
-
         function restartGame() {
             hideTryAgain();
             gameState.isNegativeResult = false;
@@ -759,7 +569,7 @@
             
             waitForImages(() => {
                 console.log('All images loaded, game ready!');
-                showMenu();
+                changeImage(IMAGES.static);
             });
         }
 
@@ -782,19 +592,6 @@
                 e.preventDefault();
                 restartGame();
             });
-
-            menuButton.addEventListener('click', showMenu);
-            menuButton.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                showMenu();
-            });
-
-            menuScreen.addEventListener('click', startGame);
-            menuScreen.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startGame();
-            });
-
         }
 
         setupEventListeners();
