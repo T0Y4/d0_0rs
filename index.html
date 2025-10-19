@@ -46,6 +46,12 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .game-area {
@@ -86,6 +92,12 @@
             -moz-user-drag: none;
             -o-user-drag: none;
             z-index: 5;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
         .try-again-overlay {
             position: absolute;
@@ -152,6 +164,12 @@
             opacity: 0;
             pointer-events: none;
             transition: none;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .score-counter.show {
@@ -171,6 +189,12 @@
             opacity: 0;
             pointer-events: none;
             transition: none;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .menu-button.show {
@@ -271,6 +295,12 @@
             align-items: center;
             justify-content: center;
             z-index: 30;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .menu-screen.show {
@@ -293,6 +323,12 @@
             cursor: pointer;
             text-align: center;
             transition: none;
+            transform: translateZ(0);
+            contain: layout style paint;
+            isolation: isolate;
+            -webkit-transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         @media (max-width: 768px) {
