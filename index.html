@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>DOORS</title>
+    <link rel="icon" type="image/svg+xml" href="images/logo.svg">
+    <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        const firebaseConfig = {
+            // Здесь будут ваши конфигурационные данные Firebase
+            apiKey: "AIzaSyAPZ5-PN5pEJUCNVOmP8ISlwepWYTS7U6s",
+            authDomain: "doors-6c996.firebaseapp.com",
+            projectId: "doors-6c996",
+            storageBucket: "doors-6c996.firebasestorage.app",
+            messagingSenderId: "802149536687",
+            appId: "1:802149536687:web:13a914340453bc2000155a"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Делаем Firebase доступным глобально
+        window.firebase = { db, doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, onSnapshot };
+    </script>
+    <style>
+        @font-face {
+            font-family: 'Tiny5';
+            src: url('fonts/Tiny5-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .left-zone, .right-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 10;
+        }
+
+        .left-zone {
+            left: 0;
+        }
+
+        .right-zone {
+            right: 0;
+        }
+
+        .game-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            transition: none;
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            z-index: 5;
+        }
+
+        .try-again-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .try-again-overlay.show {
+            display: flex;
+        }
+
+        .try-again-text {
+            color: #000;
+            font-family: 'Tiny5', monospace;
+            font-size: 50px;
+            font-weight: normal;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        .try-again-text:hover {
+            opacity: 0.7;
+        }
+
+        .try-again-text:active {
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            .try-again-text {
+                font-size: 40px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .try-again-text {
+                font-size: 36px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .try-again-text {
+                font-size: 32px;
+            }
+        }
+
+        .score-counter {
+            position: absolute;
+            top: 50px;
+            right: 50px;
+            z-index: 15;
+            font-family: 'Tiny5', monospace;
+            color: #000;
+            text-align: right;
+        }
+
+        .high-score {
+            font-size: 50px;
+        }
+
+        .current-score {
+            font-size: 50px;
+        }
+
+        .score-label {
+            color: #000;
+        }
+
+        .score-value {
+            font-weight: normal;
+        }
+
+        .hs-number {
+            font-weight: normal;
+            color: #000;
+            transform: scale(1);
+            display: inline-block;
+        }
+
+        .hs-number.gold {
+            color: #FFD700;
+        }
+
+        .hs-number.pop {
+            transform: scale(1.35);
+        }
+
+        .leaderboard {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #000;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 25;
+            display: none;
+            min-width: 300px;
+            max-width: 90vw;
+        }
+
+        .leaderboard.show {
+            display: block;
+        }
+
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .leaderboard-title {
+            font-family: 'Tiny5', monospace;
+            font-size: 24px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .leaderboard-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #000;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .leaderboard-close:hover {
+            background: #f0f0f0;
+            border-radius: 50%;
+        }
+
+        .leaderboard-list {
+            font-family: 'Tiny5', monospace;
+            font-size: 18px;
+            color: #000;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-rank {
+            font-weight: bold;
+            width: 30px;
+        }
+
+        .leaderboard-username {
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .leaderboard-score {
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .leaderboard-loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .leaderboard-button {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #000;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 15;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .leaderboard-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+        }
+
+        .leaderboard-button:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .score-counter {
+                top: 30px;
+                right: 30px;
+            }
+            
+            .high-score, .current-score {
+                font-size: 40px;
+            }
+            
+            .leaderboard-button {
+                top: 30px;
+                left: 30px;
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .leaderboard {
+                min-width: 280px;
+                padding: 15px;
+            }
+            
+            .leaderboard-title {
+                font-size: 20px;
+            }
+            
+            .leaderboard-list {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .score-counter {
+                top: 25px;
+                right: 25px;
+            }
+            
+            .high-score, .current-score {
+                font-size: 36px;
+            }
+            
+            .leaderboard-button {
+                top: 25px;
+                left: 25px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .leaderboard {
+                min-width: 260px;
+                padding: 12px;
+            }
+            
+            .leaderboard-title {
+                font-size: 18px;
+            }
+            
+            .leaderboard-list {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .score-counter {
+                top: 20px;
+                right: 20px;
+            }
+            
+            .high-score, .current-score {
+                font-size: 32px;
+            }
+            
+            .leaderboard-button {
+                top: 20px;
+                left: 20px;
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+            
+            .leaderboard {
+                min-width: 240px;
+                padding: 10px;
+            }
+            
+            .leaderboard-title {
+                font-size: 16px;
+            }
+            
+            .leaderboard-list {
+                font-size: 12px;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: white;
+            }
+        }
+
+        .game-canvas {
+            animation: pixelAppear 0.1s ease-out;
+        }
+
+        @keyframes pixelAppear {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area">
+            <div class="left-zone" id="leftZone"></div>
+            <div class="right-zone" id="rightZone"></div>
+            <canvas 
+                class="game-canvas"
+                id="gameCanvas"
+            ></canvas>
+            <div class="try-again-overlay" id="tryAgainOverlay">
+                <div class="try-again-text" id="tryAgainText">
+                    try again
+                </div>
+            </div>
+            
+            <!-- Счетчик -->
+            <div class="score-counter" id="scoreCounter">
+                <div class="high-score">
+                    <span class="score-label">hs:</span> <span class="hs-number" id="hsNumber">0</span>
+                </div>
+                <div class="current-score">
+                    <span class="score-value" id="currentScoreValue">0</span>
+                </div>
+            </div>
+            
+            <!-- Leaderboard -->
+            <div class="leaderboard" id="leaderboard">
+                <div class="leaderboard-header">
+                    <span class="leaderboard-title">top 5</span>
+                    <button class="leaderboard-close" id="leaderboardClose">×</button>
+                </div>
+                <div class="leaderboard-list" id="leaderboardList">
+                    <div class="leaderboard-loading">loading...</div>
+                </div>
+            </div>
+            
+            <!-- Кнопка открытия leaderboard -->
+            <button class="leaderboard-button" id="leaderboardButton">🏆</button>
+        </div>
+    </div>
+
+    <script>
+        const IMAGES = {
+            static: 'images/static_image.svg',
+            left: {
+                positive: [
+                    'images/left_1.svg',
+                    'images/left_2.svg',
+                    'images/left_3.svg'
+                ],
+                negative: [
+                    'images/left_1.svg',
+                    'images/left_2.svg',
+                    'images/left_3_0.svg'
+                ]
+            },
+            right: {
+                positive: [
+                    'images/right_1.svg',
+                    'images/right_2.svg',
+                    'images/right_3.svg'
+                ],
+                negative: [
+                    'images/right_1.svg',
+                    'images/right_2.svg',
+                    'images/right_3_0.svg'
+                ]
+            }
+        };
+
+        let canvas, ctx;
+        let canvasWidth, canvasHeight;
+        
+        const imageCache = new Map();
+        let imagesLoaded = 0;
+        const totalImages = 9;
+
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            resizeCanvas();
+            
+            ctx.imageSmoothingEnabled = false;
+            ctx.webkitImageSmoothingEnabled = false;
+            ctx.mozImageSmoothingEnabled = false;
+            ctx.msImageSmoothingEnabled = false;
+            
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            ctx.scale(dpr, dpr);
+            
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+        }
+
+        function preloadImages() {
+            const allImages = [
+                IMAGES.static,
+                ...IMAGES.left.positive,
+                ...IMAGES.left.negative,
+                ...IMAGES.right.positive,
+                ...IMAGES.right.negative
+            ];
+
+            // Убираем дубликаты
+            const uniqueImages = [...new Set(allImages)];
+
+            uniqueImages.forEach(src => {
+                const img = new Image();
+                img.onload = () => {
+                    imagesLoaded++;
+                    imageCache.set(src, img);
+                    console.log(`Loaded: ${src} (${imagesLoaded}/${totalImages})`);
+                };
+                img.onerror = () => {
+                    console.error('Failed to load image:', src);
+                    imagesLoaded++;
+                };
+                img.src = src;
+            });
+        }
+
+        // Проверка готовности всех изображений
+        function waitForImages(callback) {
+            if (imagesLoaded >= totalImages) {
+                callback();
+            } else {
+                setTimeout(() => waitForImages(callback), 50);
+            }
+        }
+
+        let gameState = {
+            isAnimating: false,
+            currentSide: null,
+            currentFrame: 0,
+            animationFrames: [],
+            animationStartTime: 0,
+            isNegativeResult: false,
+            currentScore: 0,
+            highScore: 0
+        };
+
+        const leftZone = document.getElementById('leftZone');
+        const rightZone = document.getElementById('rightZone');
+        const tryAgainOverlay = document.getElementById('tryAgainOverlay');
+        const tryAgainText = document.getElementById('tryAgainText');
+        const hsNumber = document.getElementById('hsNumber');
+        const currentScoreValue = document.getElementById('currentScoreValue');
+        const leaderboard = document.getElementById('leaderboard');
+        const leaderboardButton = document.getElementById('leaderboardButton');
+        const leaderboardClose = document.getElementById('leaderboardClose');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        let currentUser = null;
+        let leaderboardUnsubscribe = null;
+
+        function getTelegramUser() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    return {
+                        tg_id: user.id.toString(),
+                        first_name: user.first_name || '',
+                        last_name: user.last_name || '',
+                        tg_username: user.username || '',
+                        doors_username: `player_${user.id}`
+                    };
+                }
+            }
+            return null;
+        }
+
+        async function createOrUpdateUser(userData) {
+            if (!window.firebase) {
+                console.error('Firebase not initialized');
+                return null;
+            }
+
+            const { db, doc, setDoc, getDoc } = window.firebase;
+            const userRef = doc(db, 'users', userData.tg_id);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                const now = new Date().toISOString();
+                
+                if (userDoc.exists()) {
+                    const existingData = userDoc.data();
+                    await setDoc(userRef, {
+                        ...existingData,
+                        last_played: now,
+                        games_played: (existingData.games_played || 0) + 1
+                    }, { merge: true });
+                    return { ...existingData, last_played: now, games_played: (existingData.games_played || 0) + 1 };
+                } else {
+                    const newUserData = {
+                        ...userData,
+                        high_score: 0,
+                        games_played: 1,
+                        created_at: now,
+                        last_played: now,
+                        displayable: true
+                    };
+                    await setDoc(userRef, newUserData);
+                    return newUserData;
+                }
+            } catch (error) {
+                console.error('Error creating/updating user:', error);
+                return null;
+            }
+        }
+
+        async function updateUserScore(telegramId, newScore) {
+            if (!window.firebase) {
+                console.error('Firebase not initialized');
+                return false;
+            }
+
+            const { db, doc, getDoc, setDoc } = window.firebase;
+            const userRef = doc(db, 'users', telegramId);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    if (newScore > userData.high_score) {
+                        await setDoc(userRef, {
+                            high_score: newScore,
+                            last_played: new Date().toISOString()
+                        }, { merge: true });
+                        return true;
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Error updating user score:', error);
+                return false;
+            }
+        }
+
+        async function loadUserData(telegramId) {
+            if (!window.firebase) {
+                console.error('Firebase not initialized');
+                return null;
+            }
+
+            const { db, doc, getDoc } = window.firebase;
+            const userRef = doc(db, 'users', telegramId);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    return userDoc.data();
+                }
+                return null;
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                return null;
+            }
+        }
+
+        function showLeaderboard() {
+            leaderboard.classList.add('show');
+            loadLeaderboard();
+        }
+
+        function hideLeaderboard() {
+            leaderboard.classList.remove('show');
+        }
+
+        function loadLeaderboard() {
+            if (!window.firebase) {
+                leaderboardList.innerHTML = '<div class="leaderboard-loading">Firebase not available</div>';
+                return;
+            }
+
+            const { db, collection, query, orderBy, limit, onSnapshot } = window.firebase;
+            
+            if (leaderboardUnsubscribe) {
+                leaderboardUnsubscribe();
+            }
+
+            const q = query(
+                collection(db, 'users'),
+                orderBy('high_score', 'desc'),
+                limit(5)
+            );
+
+            leaderboardUnsubscribe = onSnapshot(q, (snapshot) => {
+                const users = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.displayable !== false) {
+                        users.push(data);
+                    }
+                });
+
+                if (users.length === 0) {
+                    leaderboardList.innerHTML = '<div class="leaderboard-loading">no players yet</div>';
+                    return;
+                }
+
+                leaderboardList.innerHTML = users.map((user, index) => `
+                    <div class="leaderboard-item">
+                        <span class="leaderboard-rank">${index + 1}.</span>
+                        <span class="leaderboard-username">${user.doors_username}</span>
+                        <span class="leaderboard-score">${user.high_score}</span>
+                    </div>
+                `).join('');
+            }, (error) => {
+                console.error('Error loading leaderboard:', error);
+                leaderboardList.innerHTML = '<div class="leaderboard-loading">error loading</div>';
+            });
+        }
+
+        function drawImage(src) {
+            const img = imageCache.get(src);
+            if (!img) {
+                console.error('Image not found in cache:', src);
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            const maxDisplaySize = 1000;
+            
+            const imgAspect = img.width / img.height;
+            const canvasAspect = canvasWidth / canvasHeight;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            if (imgAspect > canvasAspect) {
+                drawWidth = canvasWidth;
+                drawHeight = canvasWidth / imgAspect;
+            } else {
+                drawHeight = canvasHeight;
+                drawWidth = canvasHeight * imgAspect;
+            }
+            
+            if (drawWidth > maxDisplaySize) {
+                drawWidth = maxDisplaySize;
+                drawHeight = maxDisplaySize / imgAspect;
+            }
+            if (drawHeight > maxDisplaySize) {
+                drawHeight = maxDisplaySize;
+                drawWidth = maxDisplaySize * imgAspect;
+            }
+            
+            drawX = (canvasWidth - drawWidth) / 2;
+            drawY = (canvasHeight - drawHeight) / 2;
+            
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        }
+
+        function getRandomResult() {
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return array[0] % 2 === 0;
+        }
+
+        function playSequence(images, callback) {
+            if (gameState.isAnimating) return;
+            
+            gameState.isAnimating = true;
+            gameState.animationFrames = images;
+            gameState.currentFrame = 0;
+            gameState.animationStartTime = performance.now();
+            
+            animateFrame();
+            
+            function animateFrame() {
+                if (!gameState.isAnimating) return;
+                
+                const currentTime = performance.now();
+                const elapsedTime = currentTime - gameState.animationStartTime;
+                
+                let frameIndex = 0;
+                let accumulatedTime = 0;
+                
+                for (let i = 0; i < images.length; i++) {
+                    const frameDuration = (i === images.length - 1 && gameState.isNegativeResult) ? 500 : 250;
+                    
+                    if (elapsedTime < accumulatedTime + frameDuration) {
+                        frameIndex = i;
+                        break;
+                    }
+                    accumulatedTime += frameDuration;
+                    frameIndex = i + 1;
+                }
+                
+                if (frameIndex < images.length) {
+                    drawImage(images[frameIndex]);
+                    requestAnimationFrame(animateFrame);
+                } else {
+                    gameState.isAnimating = false;
+                    if (callback) callback();
+                }
+            }
+        }
+
+        function changeImage(src) {
+            drawImage(src);
+        }
+
+        function showTryAgain() {
+            tryAgainOverlay.classList.add('show');
+        }
+
+        function hideTryAgain() {
+            tryAgainOverlay.classList.remove('show');
+        }
+
+        function updateScoreDisplay() {
+            currentScoreValue.textContent = gameState.currentScore;
+            hsNumber.textContent = gameState.highScore;
+        }
+
+        function celebrateHighScore() {
+            hsNumber.classList.remove('gold', 'pop');
+            void hsNumber.offsetWidth;
+            hsNumber.classList.add('gold', 'pop');
+            setTimeout(() => { 
+                hsNumber.classList.remove('gold', 'pop'); 
+            }, 220);
+        }
+
+        async function increaseScore() {
+            gameState.currentScore++;
+            currentScoreValue.textContent = gameState.currentScore;
+            
+            if (gameState.currentScore > gameState.highScore) {
+                gameState.highScore = gameState.currentScore;
+                hsNumber.textContent = gameState.highScore;
+                
+                if (currentUser && currentUser.tg_id) {
+                    await updateUserScore(currentUser.tg_id, gameState.highScore);
+                }
+                
+                celebrateHighScore();
+            }
+        }
+
+        function resetCurrentScore() {
+            gameState.currentScore = 0;
+            updateScoreDisplay();
+        }
+
+        async function updateHighScore() {
+            if (gameState.currentScore > gameState.highScore) {
+                gameState.highScore = gameState.currentScore;
+                
+                if (currentUser && currentUser.tg_id) {
+                    await updateUserScore(currentUser.tg_id, gameState.highScore);
+                }
+                
+                updateScoreDisplay();
+            }
+        }
+
+        async function loadHighScore() {
+            if (currentUser && currentUser.tg_id) {
+                const userData = await loadUserData(currentUser.tg_id);
+                if (userData && userData.high_score) {
+                    gameState.highScore = userData.high_score;
+                    hsNumber.textContent = gameState.highScore;
+                }
+            } else {
+                const savedHighScore = localStorage.getItem('doorsHighScore');
+                if (savedHighScore) {
+                    gameState.highScore = parseInt(savedHighScore, 10);
+                    hsNumber.textContent = gameState.highScore;
+                }
+            }
+        }
+
+        function restartGame() {
+            hideTryAgain();
+            gameState.isNegativeResult = false;
+            resetCurrentScore();
+            changeImage(IMAGES.static);
+        }
+
+        function handleZoneClick(side) {
+            if (gameState.isAnimating) return;
+            
+            hideTryAgain();
+            
+            gameState.currentSide = side;
+            
+            const isPositive = getRandomResult();
+            gameState.isNegativeResult = !isPositive;
+            
+            const images = isPositive ? 
+                IMAGES[side].positive : 
+                IMAGES[side].negative;
+            
+            playSequence(images, () => {
+                if (gameState.isNegativeResult) {
+                    showTryAgain();
+                } else {
+                    increaseScore();
+                changeImage(IMAGES.static);
+                }
+                gameState.currentSide = null;
+            });
+        }
+
+        async function initGame() {
+            initCanvas();
+            
+            const telegramUser = getTelegramUser();
+            if (telegramUser) {
+                currentUser = await createOrUpdateUser(telegramUser);
+                console.log('User initialized:', currentUser);
+            }
+            
+            await loadHighScore();
+            
+            preloadImages();
+            
+            waitForImages(() => {
+                console.log('All images loaded, game ready!');
+                changeImage(IMAGES.static);
+            });
+        }
+
+        function setupEventListeners() {
+            leftZone.addEventListener('click', () => handleZoneClick('left'));
+            rightZone.addEventListener('click', () => handleZoneClick('right'));
+
+            leftZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('left');
+            });
+
+            rightZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('right');
+            });
+
+            tryAgainOverlay.addEventListener('click', restartGame);
+            tryAgainOverlay.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                restartGame();
+            });
+
+            leaderboardButton.addEventListener('click', showLeaderboard);
+            leaderboardButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                showLeaderboard();
+            });
+
+            leaderboardClose.addEventListener('click', hideLeaderboard);
+            leaderboardClose.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                hideLeaderboard();
+            });
+        }
+
+        setupEventListeners();
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            
+            tg.ready();
+            tg.expand();
+            
+            tg.enableClosingConfirmation();
+            
+            window.addEventListener('resize', function() {
+                tg.expand();
+            });
+        }
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        let ticking = false;
+        
+        function updateLayout() {
+            ticking = false;
+        }
+
+        function requestTick() {
+            if (!ticking) {
+                requestAnimationFrame(updateLayout);
+                ticking = true;
+            }
+        }
+
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                requestTick();
+            }, 100);
+        });
+
+        window.addEventListener('resize', requestTick);
+
+        initGame();
+    </script>
+</body>
+</html>
