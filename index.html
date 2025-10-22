@@ -411,11 +411,19 @@
         let currentUser = null;
 
         function getTelegramUser() {
+            console.log('Checking for Telegram WebApp...');
+            console.log('window.Telegram:', !!window.Telegram);
+            
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
+                console.log('Telegram WebApp found:', tg);
+                console.log('tg.initDataUnsafe:', tg.initDataUnsafe);
+                
                 const user = tg.initDataUnsafe?.user;
+                console.log('Telegram user:', user);
+                
                 if (user) {
-                    return {
+                    const userData = {
                         tg_id: user.id.toString(),
                         first_name: user.first_name || '',
                         last_name: user.last_name || '',
@@ -423,12 +431,18 @@
                         doors_username: `player_${user.id}`,
                         language_code: user.language_code || 'en'
                     };
+                    console.log('Parsed user data:', userData);
+                    return userData;
                 }
             }
+            
+            console.log('No Telegram user found');
             return null;
         }
 
         async function createOrUpdateUser(userData) {
+            console.log('createOrUpdateUser called with:', userData);
+            
             if (!window.firebase) {
                 console.log('Firebase not available, using localStorage');
                 return null;
@@ -436,14 +450,19 @@
 
             const { db, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } = window.firebase;
             const userRef = doc(db, 'users', userData.tg_id);
+            console.log('User reference:', userRef.path);
             
             try {
                 const userDoc = await getDoc(userRef);
+                console.log('User exists:', userDoc.exists());
+                
                 const now = new Date().toISOString();
                 
                 if (userDoc.exists()) {
                     // Пользователь существует - обновляем last_played и games_played
                     const existingData = userDoc.data();
+                    console.log('Existing user data:', existingData);
+                    
                     await setDoc(userRef, {
                         ...existingData,
                         last_played: now,
@@ -453,13 +472,19 @@
                     return { ...existingData, last_played: now, games_played: (existingData.games_played || 0) + 1 };
                 } else {
                     // Новый пользователь - создаем запись с id
+                    console.log('Creating new user...');
+                    
                     const usersQuery = query(collection(db, 'users'), orderBy('id', 'desc'), limit(1));
                     const usersSnapshot = await getDocs(usersQuery);
+                    console.log('Users snapshot:', usersSnapshot.empty ? 'empty' : usersSnapshot.docs.length);
                     
                     let newId = 1;
                     if (!usersSnapshot.empty) {
                         const lastUser = usersSnapshot.docs[0].data();
                         newId = (lastUser.id || 0) + 1;
+                        console.log('Last user id:', lastUser.id, 'new id:', newId);
+                    } else {
+                        console.log('No users found, using id:', newId);
                     }
                     
                     const newUserData = {
@@ -475,8 +500,10 @@
                         last_played: now,
                         displayable: true
                     };
+                    
+                    console.log('Creating user with data:', newUserData);
                     await setDoc(userRef, newUserData);
-                    console.log('New user created:', newUserData.doors_username, 'with id:', newId);
+                    console.log('New user created successfully:', newUserData.doors_username, 'with id:', newId);
                     return newUserData;
                 }
             } catch (error) {
@@ -848,20 +875,27 @@
         }
 
         async function initGame() {
+            console.log('=== INIT GAME START ===');
             initCanvas();
             
             // Инициализируем пользователя
             const telegramUser = getTelegramUser();
+            console.log('Telegram user from getTelegramUser:', telegramUser);
+            
             if (telegramUser) {
+                console.log('Creating/updating user...');
                 currentUser = await createOrUpdateUser(telegramUser);
                 console.log('User initialized:', currentUser);
                 
                 // Пользователь создан/обновлен - загружаем hs
+                console.log('Loading high score...');
                 await loadHighScore();
+                console.log('High score loaded:', gameState.highScore);
             } else {
                 console.log('No Telegram user detected, using localStorage');
                 // Нет telegram_id - загружаем из localStorage
                 await loadHighScore();
+                console.log('High score from localStorage:', gameState.highScore);
             }
             
             preloadImages();
@@ -870,6 +904,8 @@
                 console.log('All images loaded, game ready!');
                 changeImage(IMAGES.static);
             });
+            
+            console.log('=== INIT GAME END ===');
         }
 
         function setupEventListeners() {
@@ -1027,6 +1063,28 @@
                 console.log('4. Пользователь:', currentUser);
                 
                 console.log('=== Тест завершен. Проверьте Firebase Console! ===');
+            },
+            
+            // Очистить все данные и перезапустить игру
+            clearAllAndRestart: () => {
+                console.log('=== Очистка всех данных ===');
+                currentUser = null;
+                localStorage.clear();
+                gameState.highScore = 0;
+                gameState.currentScore = 0;
+                hsNumber.textContent = '0';
+                currentScoreValue.textContent = '0';
+                console.log('Все данные очищены. Перезагрузите страницу для тестирования.');
+            },
+            
+            // Показать текущее состояние
+            showStatus: () => {
+                console.log('=== Текущее состояние ===');
+                console.log('currentUser:', currentUser);
+                console.log('gameState.highScore:', gameState.highScore);
+                console.log('localStorage doorsHighScore:', localStorage.getItem('doorsHighScore'));
+                console.log('Firebase available:', !!window.firebase);
+                console.log('Telegram available:', !!window.Telegram);
             }
         };
 
