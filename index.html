@@ -442,15 +442,17 @@
                 const now = new Date().toISOString();
                 
                 if (userDoc.exists()) {
+                    // Пользователь существует - обновляем last_played и games_played
                     const existingData = userDoc.data();
                     await setDoc(userRef, {
                         ...existingData,
                         last_played: now,
                         games_played: (existingData.games_played || 0) + 1
                     }, { merge: true });
+                    console.log('User updated:', existingData.doors_username, 'games_played:', (existingData.games_played || 0) + 1);
                     return { ...existingData, last_played: now, games_played: (existingData.games_played || 0) + 1 };
                 } else {
-                    // Находим максимальный id среди всех пользователей
+                    // Новый пользователь - создаем запись с id
                     const usersQuery = query(collection(db, 'users'), orderBy('id', 'desc'), limit(1));
                     const usersSnapshot = await getDocs(usersQuery);
                     
@@ -474,6 +476,7 @@
                         displayable: true
                     };
                     await setDoc(userRef, newUserData);
+                    console.log('New user created:', newUserData.doors_username, 'with id:', newId);
                     return newUserData;
                 }
             } catch (error) {
@@ -710,16 +713,12 @@
                     await syncLocalStorageWithFirebase(userData.high_score);
                     return;
                 } else {
-                    // Пользователь не найден в Firebase - создаем его
-                    // Если есть данные в localStorage - используем их
-                    const savedHighScore = localStorage.getItem('doorsHighScore');
-                    if (savedHighScore) {
-                        gameState.highScore = parseInt(savedHighScore, 10);
-                        hsNumber.textContent = gameState.highScore;
-                        // Создаем пользователя с hs из localStorage
-                        await migrateLocalStorageToFirebase(gameState.highScore);
-                        return;
-                    }
+                    // Пользователь должен был быть создан в initGame
+                    // Если дошли сюда - что-то пошло не так
+                    console.error('User not found in Firebase, but should have been created in initGame');
+                    gameState.highScore = 0;
+                    hsNumber.textContent = gameState.highScore;
+                    return;
                 }
             }
             
@@ -727,6 +726,9 @@
             const savedHighScore = localStorage.getItem('doorsHighScore');
             if (savedHighScore) {
                 gameState.highScore = parseInt(savedHighScore, 10);
+                hsNumber.textContent = gameState.highScore;
+            } else {
+                gameState.highScore = 0;
                 hsNumber.textContent = gameState.highScore;
             }
         }
@@ -853,11 +855,14 @@
             if (telegramUser) {
                 currentUser = await createOrUpdateUser(telegramUser);
                 console.log('User initialized:', currentUser);
+                
+                // Пользователь создан/обновлен - загружаем hs
+                await loadHighScore();
             } else {
                 console.log('No Telegram user detected, using localStorage');
+                // Нет telegram_id - загружаем из localStorage
+                await loadHighScore();
             }
-            
-            await loadHighScore();
             
             preloadImages();
             
@@ -1000,6 +1005,26 @@
                 // 5. Загружаем hs (должна произойти синхронизация)
                 await loadHighScore();
                 console.log('5. Загружен hs, должна произойти синхронизация localStorage → Firebase');
+                
+                console.log('=== Тест завершен. Проверьте Firebase Console! ===');
+            },
+            
+            // Тест создания пользователя при первом входе
+            testFirstLogin: async () => {
+                console.log('=== Тест: Первый вход пользователя ===');
+                
+                // 1. Сбрасываем все данные
+                currentUser = null;
+                localStorage.clear();
+                console.log('1. Очищены все данные');
+                
+                // 2. Симулируем первого пользователя
+                await window.testFirebase.simulateUser1();
+                console.log('2. Создан первый пользователь - должен получить id = 1');
+                
+                // 3. Проверяем, что пользователь создан с hs = 0
+                console.log('3. Текущий hs:', gameState.highScore);
+                console.log('4. Пользователь:', currentUser);
                 
                 console.log('=== Тест завершен. Проверьте Firebase Console! ===');
             }
