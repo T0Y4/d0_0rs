@@ -7,6 +7,30 @@
     <title>DOORS</title>
     <link rel="icon" type="image/svg+xml" href="images/logo.svg">
     <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // ⚠️ ЗАМЕНИТЕ НА ВАШУ КОНФИГУРАЦИЮ FIREBASE ⚠️
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPZ5-PN5pEJUCNVOmP8ISlwepWYTS7U6s",
+            authDomain: "doors-6c996.firebaseapp.com", 
+            projectId: "doors-6c996",
+            storageBucket: "doors-6c996.firebasestorage.app",
+            messagingSenderId: "802149536687",
+            appId: "1:802149536687:web:13a914340453bc2000155a"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Делаем Firebase доступным глобально
+        window.firebase = { db, doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs };
+        console.log('Firebase initialized successfully!');
+    </script>
+    
     <style>
         @font-face {
             font-family: 'Tiny5';
@@ -384,6 +408,130 @@
         const hsNumber = document.getElementById('hsNumber');
         const currentScoreValue = document.getElementById('currentScoreValue');
 
+        let currentUser = null;
+
+        function getTelegramUser() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    return {
+                        tg_id: user.id.toString(),
+                        first_name: user.first_name || '',
+                        last_name: user.last_name || '',
+                        tg_username: user.username || '',
+                        doors_username: `player_${user.id}`,
+                        language_code: user.language_code || 'en'
+                    };
+                }
+            }
+            return null;
+        }
+
+        async function createOrUpdateUser(userData) {
+            if (!window.firebase) {
+                console.log('Firebase not available, using localStorage');
+                return null;
+            }
+
+            const { db, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } = window.firebase;
+            const userRef = doc(db, 'users', userData.tg_id);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                const now = new Date().toISOString();
+                
+                if (userDoc.exists()) {
+                    const existingData = userDoc.data();
+                    await setDoc(userRef, {
+                        ...existingData,
+                        last_played: now,
+                        games_played: (existingData.games_played || 0) + 1
+                    }, { merge: true });
+                    return { ...existingData, last_played: now, games_played: (existingData.games_played || 0) + 1 };
+                } else {
+                    // Находим максимальный id среди всех пользователей
+                    const usersQuery = query(collection(db, 'users'), orderBy('id', 'desc'), limit(1));
+                    const usersSnapshot = await getDocs(usersQuery);
+                    
+                    let newId = 1;
+                    if (!usersSnapshot.empty) {
+                        const lastUser = usersSnapshot.docs[0].data();
+                        newId = (lastUser.id || 0) + 1;
+                    }
+                    
+                    const newUserData = {
+                        id: newId,
+                        tg_id: userData.tg_id,
+                        first_name: userData.first_name,
+                        last_name: userData.last_name,
+                        tg_username: userData.tg_username,
+                        doors_username: `player ${newId}`,
+                        high_score: 0,
+                        games_played: 1,
+                        created_at: now,
+                        last_played: now,
+                        displayable: true
+                    };
+                    await setDoc(userRef, newUserData);
+                    return newUserData;
+                }
+            } catch (error) {
+                console.error('Error creating/updating user:', error);
+                return null;
+            }
+        }
+
+        async function updateUserScore(tgId, newScore) {
+            if (!window.firebase) {
+                console.log('Firebase not available');
+                return false;
+            }
+
+            const { db, doc, getDoc, setDoc } = window.firebase;
+            const userRef = doc(db, 'users', tgId);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    if (newScore > userData.high_score) {
+                        await setDoc(userRef, {
+                            high_score: newScore,
+                            last_played: new Date().toISOString()
+                        }, { merge: true });
+                        console.log('Score saved to Firebase:', newScore);
+                        return true;
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Error updating user score:', error);
+                return false;
+            }
+        }
+
+        async function loadUserData(tgId) {
+            if (!window.firebase) {
+                console.log('Firebase not available, using localStorage');
+                return null;
+            }
+
+            const { db, doc, getDoc } = window.firebase;
+            const userRef = doc(db, 'users', tgId);
+            
+            try {
+                const userDoc = await getDoc(userRef);
+                if (userDoc.exists()) {
+                    return userDoc.data();
+                }
+                return null;
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                return null;
+            }
+        }
+
         function drawImage(src) {
             const img = imageCache.get(src);
             if (!img) {
@@ -495,14 +643,29 @@
             }, 220);
         }
 
-        function increaseScore() {
+        async function increaseScore() {
             gameState.currentScore++;
             currentScoreValue.textContent = gameState.currentScore;
             
             if (gameState.currentScore > gameState.highScore) {
                 gameState.highScore = gameState.currentScore;
                 hsNumber.textContent = gameState.highScore;
-                localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                
+                // Сохраняем hs в зависимости от наличия telegram_id
+                if (currentUser && currentUser.tg_id) {
+                    // Есть telegram_id - пытаемся сохранить в Firebase
+                    const firebaseSaved = await updateUserScore(currentUser.tg_id, gameState.highScore);
+                    
+                    if (!firebaseSaved && window.firebase) {
+                        // Firebase недоступен - сохраняем в localStorage как fallback
+                        localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                        console.log('Firebase unavailable, saved to localStorage as fallback');
+                    }
+                } else {
+                    // Нет telegram_id - сохраняем в localStorage
+                    localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                }
+                
                 celebrateHighScore();
             }
         }
@@ -512,19 +675,141 @@
             updateScoreDisplay();
         }
 
-        function updateHighScore() {
+        async function updateHighScore() {
             if (gameState.currentScore > gameState.highScore) {
                 gameState.highScore = gameState.currentScore;
-                localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                
+                // Сохраняем hs в зависимости от наличия telegram_id
+                if (currentUser && currentUser.tg_id) {
+                    // Есть telegram_id - пытаемся сохранить в Firebase
+                    const firebaseSaved = await updateUserScore(currentUser.tg_id, gameState.highScore);
+                    
+                    if (!firebaseSaved && window.firebase) {
+                        // Firebase недоступен - сохраняем в localStorage как fallback
+                        localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                        console.log('Firebase unavailable, saved to localStorage as fallback');
+                    }
+                } else {
+                    // Нет telegram_id - сохраняем в localStorage
+                    localStorage.setItem('doorsHighScore', gameState.highScore.toString());
+                }
+                
                 updateScoreDisplay();
             }
         }
 
-        function loadHighScore() {
+        async function loadHighScore() {
+            // Если есть telegram_id - работаем с Firebase
+            if (currentUser && currentUser.tg_id) {
+                const userData = await loadUserData(currentUser.tg_id);
+                if (userData && userData.high_score !== undefined) {
+                    gameState.highScore = userData.high_score;
+                    hsNumber.textContent = gameState.highScore;
+                    
+                    // Проверяем, есть ли данные в localStorage для синхронизации
+                    await syncLocalStorageWithFirebase(userData.high_score);
+                    return;
+                } else {
+                    // Пользователь не найден в Firebase - создаем его
+                    // Если есть данные в localStorage - используем их
+                    const savedHighScore = localStorage.getItem('doorsHighScore');
+                    if (savedHighScore) {
+                        gameState.highScore = parseInt(savedHighScore, 10);
+                        hsNumber.textContent = gameState.highScore;
+                        // Создаем пользователя с hs из localStorage
+                        await migrateLocalStorageToFirebase(gameState.highScore);
+                        return;
+                    }
+                }
+            }
+            
+            // Нет telegram_id - работаем только с localStorage
             const savedHighScore = localStorage.getItem('doorsHighScore');
             if (savedHighScore) {
                 gameState.highScore = parseInt(savedHighScore, 10);
                 hsNumber.textContent = gameState.highScore;
+            }
+        }
+
+        async function syncLocalStorageWithFirebase(firebaseScore) {
+            if (!currentUser || !currentUser.tg_id || !window.firebase) {
+                return;
+            }
+
+            const localStorageScore = localStorage.getItem('doorsHighScore');
+            if (localStorageScore) {
+                const localScore = parseInt(localStorageScore, 10);
+                
+                if (localScore > firebaseScore) {
+                    // localStorage hs больше Firebase hs - обновляем Firebase
+                    const success = await updateUserScore(currentUser.tg_id, localScore);
+                    if (success) {
+                        gameState.highScore = localScore;
+                        hsNumber.textContent = gameState.highScore;
+                        localStorage.removeItem('doorsHighScore');
+                        console.log('Synced higher score from localStorage to Firebase:', localScore);
+                    }
+                } else {
+                    // Firebase hs больше или равен - очищаем localStorage
+                    localStorage.removeItem('doorsHighScore');
+                    console.log('Cleared localStorage, Firebase has higher score');
+                }
+            }
+        }
+
+        async function migrateLocalStorageToFirebase(localStorageScore) {
+            if (!currentUser || !currentUser.tg_id || !window.firebase) {
+                return;
+            }
+
+            try {
+                const userData = await loadUserData(currentUser.tg_id);
+                if (userData) {
+                    // Пользователь существует в Firebase
+                    if (localStorageScore > userData.high_score) {
+                        // localStorage hs больше Firebase hs - обновляем Firebase
+                        await updateUserScore(currentUser.tg_id, localStorageScore);
+                        console.log('Migrated higher score from localStorage to Firebase:', localStorageScore);
+                    }
+                } else {
+                    // Пользователь не существует в Firebase - создаем с hs из localStorage
+                    const now = new Date().toISOString();
+                    const { db, doc, setDoc, collection, query, orderBy, limit, getDocs } = window.firebase;
+                    
+                    // Находим максимальный id
+                    const usersQuery = query(collection(db, 'users'), orderBy('id', 'desc'), limit(1));
+                    const usersSnapshot = await getDocs(usersQuery);
+                    
+                    let newId = 1;
+                    if (!usersSnapshot.empty) {
+                        const lastUser = usersSnapshot.docs[0].data();
+                        newId = (lastUser.id || 0) + 1;
+                    }
+                    
+                    const newUserData = {
+                        id: newId,
+                        tg_id: currentUser.tg_id,
+                        first_name: currentUser.first_name,
+                        last_name: currentUser.last_name,
+                        tg_username: currentUser.tg_username,
+                        doors_username: `player ${newId}`,
+                        high_score: localStorageScore,
+                        games_played: 1,
+                        created_at: now,
+                        last_played: now,
+                        displayable: true
+                    };
+                    
+                    const userRef = doc(db, 'users', currentUser.tg_id);
+                    await setDoc(userRef, newUserData);
+                    console.log('Created user in Firebase with migrated score:', localStorageScore);
+                }
+                
+                // Очищаем localStorage после успешной миграции
+                localStorage.removeItem('doorsHighScore');
+                
+            } catch (error) {
+                console.error('Error migrating localStorage to Firebase:', error);
             }
         }
 
@@ -554,16 +839,25 @@
                     showTryAgain();
                 } else {
                     increaseScore();
-                    changeImage(IMAGES.static);
+                changeImage(IMAGES.static);
                 }
                 gameState.currentSide = null;
             });
         }
 
-        function initGame() {
+        async function initGame() {
             initCanvas();
             
-            loadHighScore();
+            // Инициализируем пользователя
+            const telegramUser = getTelegramUser();
+            if (telegramUser) {
+                currentUser = await createOrUpdateUser(telegramUser);
+                console.log('User initialized:', currentUser);
+            } else {
+                console.log('No Telegram user detected, using localStorage');
+            }
+            
+            await loadHighScore();
             
             preloadImages();
             
@@ -595,6 +889,121 @@
         }
 
         setupEventListeners();
+
+        // Функции для тестирования (только для разработки)
+        window.testFirebase = {
+            // Симулировать пользователя 1
+            simulateUser1: async () => {
+                const testUser = {
+                    tg_id: "111111111",
+                    first_name: "Test User 1",
+                    last_name: "Testovich",
+                    tg_username: "test1",
+                    language_code: "en"
+                };
+                currentUser = await createOrUpdateUser(testUser);
+                await loadHighScore();
+                console.log('Simulated User 1:', currentUser);
+            },
+            
+            // Симулировать пользователя 2
+            simulateUser2: async () => {
+                const testUser = {
+                    tg_id: "222222222", 
+                    first_name: "Test User 2",
+                    last_name: "Testov",
+                    tg_username: "test2",
+                    language_code: "en"
+                };
+                currentUser = await createOrUpdateUser(testUser);
+                await loadHighScore();
+                console.log('Simulated User 2:', currentUser);
+            },
+            
+            // Сбросить пользователя (вернуться к localStorage)
+            resetUser: () => {
+                currentUser = null;
+                loadHighScore();
+                console.log('User reset, using localStorage');
+            },
+            
+            // Показать текущего пользователя
+            showCurrentUser: () => {
+                console.log('Current user:', currentUser);
+            },
+            
+            // Тест миграции localStorage → Firebase
+            testMigration: async () => {
+                // Устанавливаем hs в localStorage
+                localStorage.setItem('doorsHighScore', '15');
+                console.log('Set localStorage hs to 15');
+                
+                // Сбрасываем пользователя
+                currentUser = null;
+                
+                // Симулируем пользователя (Firebase станет доступен)
+                await window.testFirebase.simulateUser1();
+                
+                // Загружаем hs (должна произойти миграция)
+                await loadHighScore();
+                
+                console.log('Migration test completed. Check Firebase Console!');
+            },
+            
+            // Тест сценария: Браузер → Telegram
+            testBrowserToTelegram: async () => {
+                console.log('=== Тест: Браузер → Telegram ===');
+                
+                // 1. Симулируем игру в браузере (без telegram_id)
+                currentUser = null;
+                localStorage.setItem('doorsHighScore', '8');
+                await loadHighScore();
+                console.log('1. Игра в браузере: hs = 8 в localStorage');
+                
+                // 2. Переходим в Telegram (появляется telegram_id)
+                await window.testFirebase.simulateUser1();
+                await loadHighScore();
+                console.log('2. Переход в Telegram: должна произойти миграция hs = 8');
+                
+                // 3. Набираем новый рекорд в Telegram
+                gameState.currentScore = 12;
+                gameState.highScore = 8;
+                await increaseScore();
+                console.log('3. Новый рекорд в Telegram: hs = 12 в Firebase');
+                
+                console.log('=== Тест завершен. Проверьте Firebase Console! ===');
+            },
+            
+            // Тест сценария: Telegram + Firebase недоступен → доступен
+            testTelegramFirebaseUnavailable: async () => {
+                console.log('=== Тест: Telegram + Firebase недоступен → доступен ===');
+                
+                // 1. Создаем пользователя в Telegram
+                await window.testFirebase.simulateUser1();
+                console.log('1. Создан Telegram пользователь');
+                
+                // 2. Симулируем недоступность Firebase (временно отключаем)
+                const originalFirebase = window.firebase;
+                window.firebase = null;
+                console.log('2. Firebase временно недоступен');
+                
+                // 3. Набираем hs (должен сохраниться в localStorage)
+                gameState.currentScore = 10;
+                gameState.highScore = 0;
+                await increaseScore();
+                console.log('3. Набран hs = 10, сохранен в localStorage (Firebase недоступен)');
+                
+                // 4. Восстанавливаем Firebase
+                window.firebase = originalFirebase;
+                console.log('4. Firebase снова доступен');
+                
+                // 5. Загружаем hs (должна произойти синхронизация)
+                await loadHighScore();
+                console.log('5. Загружен hs, должна произойти синхронизация localStorage → Firebase');
+                
+                console.log('=== Тест завершен. Проверьте Firebase Console! ===');
+            }
+        };
 
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
