@@ -264,16 +264,40 @@
     </div>
 
     <script>
-        const sounds = {
-            fail: new Audio('sounds/fail.wav'),
-            click: new Audio('sounds/click.wav'),
-            success: new Audio('sounds/success.wav')
+        function createSound(src) {
+            const audio = new Audio(src);
+            audio.preload = 'auto';
+            audio.volume = 1.0;
+            return audio;
+        }
+
+        const soundSources = {
+            fail: 'sounds/fail.wav',
+            click: 'sounds/click.wav',
+            success: 'sounds/success.wav'
         };
 
-        Object.values(sounds).forEach(sound => {
-            sound.preload = 'auto';
-            sound.volume = 1.0;
+        const preloadSounds = {};
+        Object.keys(soundSources).forEach(key => {
+            preloadSounds[key] = createSound(soundSources[key]);
+            preloadSounds[key].load();
         });
+
+        function playSound(soundKey) {
+            try {
+                const audio = new Audio(soundSources[soundKey]);
+                audio.volume = 1.0;
+                audio.currentTime = 0;
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.log('Sound play error:', err);
+                    });
+                }
+            } catch (err) {
+                console.log('Sound creation error:', err);
+            }
+        }
 
         const IMAGES = {
             static: 'images/static_image.svg',
@@ -474,16 +498,12 @@
                     drawImage(currentImage);
                     
                     if (!failSoundPlayed && (currentImage === 'images/left_3_0.svg' || currentImage === 'images/right_3_0.svg')) {
-                        sounds.fail.play().catch(err => {
-                            console.log('Fail sound play error:', err);
-                        });
+                        playSound('fail');
                         failSoundPlayed = true;
                     }
                     
                     if (!successSoundPlayed && (currentImage === 'images/left_3.svg' || currentImage === 'images/right_3.svg')) {
-                        sounds.success.play().catch(err => {
-                            console.log('Success sound play error:', err);
-                        });
+                        playSound('success');
                         successSoundPlayed = true;
                     }
                     
@@ -564,9 +584,7 @@
         function handleZoneClick(side) {
             if (gameState.isAnimating) return;
             
-            sounds.click.play().catch(err => {
-                console.log('Click sound play error:', err);
-            });
+            playSound('click');
             
             hideTryAgain();
             
