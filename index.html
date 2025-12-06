@@ -2,10 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="format-detection" content="telephone=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>DOORS</title>
     <link rel="icon" type="image/svg+xml" href="images/logo.svg">
     <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
@@ -36,27 +34,28 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: none;
+            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
-            -webkit-text-size-adjust: 100%;
-            overscroll-behavior: none;
         }
 
         .game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
+            height: -webkit-fill-available;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
             contain: layout style paint;
         }
 
         .game-area {
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             contain: layout style paint;
         }
 
@@ -78,17 +77,16 @@
         }
 
         .game-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
+            height: -webkit-fill-available;
             display: block;
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
             -webkit-user-drag: none;
             z-index: 5;
+            will-change: contents;
         }
 
         .try-again-overlay {
@@ -198,7 +196,7 @@
 
             try {
                 const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+                audioContext = new AudioContextClass();
 
                 // iOS Safari requires resume after user gesture
                 if (audioContext.state === 'suspended') {
@@ -293,11 +291,10 @@
         };
 
         const imageCache = new Map();
-        const bitmapCache = new Map();
         let imagesLoadedCount = 0;
         let totalUniqueImages = 0;
 
-        async function preloadImages() {
+        function preloadImages() {
             const allImages = [
                 IMAGES.static,
                 ...IMAGES.left.positive,
@@ -309,18 +306,11 @@
             const uniqueImages = [...new Set(allImages)];
             totalUniqueImages = uniqueImages.length;
 
-            await Promise.all(uniqueImages.map(src => {
+            return Promise.all(uniqueImages.map(src => {
                 return new Promise((resolve) => {
                     const img = new Image();
-                    img.onload = async () => {
+                    img.onload = () => {
                         imageCache.set(src, img);
-                        // Create ImageBitmap for faster GPU rendering
-                        if (typeof createImageBitmap === 'function') {
-                            try {
-                                const bitmap = await createImageBitmap(img);
-                                bitmapCache.set(src, bitmap);
-                            } catch (e) { /* fallback to img */ }
-                        }
                         imagesLoadedCount++;
                         resolve(img);
                     };
@@ -362,19 +352,20 @@
             ctx.imageSmoothingEnabled = false;
 
             resizeCanvas();
-            window.addEventListener('resize', debounce(resizeCanvas, 150));
+            window.addEventListener('resize', debounce(resizeCanvas, 100));
         }
 
         function resizeCanvas() {
-            const container = canvas.parentElement;
-            canvasWidth = container.clientWidth || window.innerWidth;
-            canvasHeight = container.clientHeight || window.innerHeight;
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
             dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
 
             canvas.width = canvasWidth * dpr;
             canvas.height = canvasHeight * dpr;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
 
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.scale(dpr, dpr);
             ctx.imageSmoothingEnabled = false;
 
             // Invalidate draw cache
@@ -419,16 +410,13 @@
         }
 
         function drawImage(src) {
-            // Use ImageBitmap if available (faster), fallback to Image
-            const drawable = bitmapCache.get(src) || imageCache.get(src);
-            if (!drawable) return;
+            const img = imageCache.get(src);
+            if (!img) return;
 
             lastDrawnImage = src;
 
             // Use cached dimensions if same image and canvas size unchanged
             if (drawCache.imgSrc !== src) {
-                const img = imageCache.get(src);
-                if (!img) return;
                 const dims = calculateDrawDimensions(img);
                 drawCache.width = dims.width;
                 drawCache.height = dims.height;
@@ -438,10 +426,10 @@
             }
 
             // Clear with white (since alpha: false)
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-            ctx.drawImage(drawable, drawCache.x, drawCache.y, drawCache.width, drawCache.height);
+            ctx.drawImage(img, drawCache.x, drawCache.y, drawCache.width, drawCache.height);
         }
 
         // ==================== GAME STATE ====================
@@ -678,10 +666,8 @@
                 preloadAllSounds()
             ]);
 
-            console.log('Game ready! Images:', imagesLoadedCount, 'Bitmaps:', bitmapCache.size, 'Audio:', audioBuffers.size);
-
-            // Force first draw on next frame for smoother start
-            requestAnimationFrame(() => drawImage(IMAGES.static));
+            console.log('Game ready! Images:', imagesLoadedCount, 'Audio buffers:', audioBuffers.size);
+            drawImage(IMAGES.static);
         }
 
         // Start game when DOM is ready
