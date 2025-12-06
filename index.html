@@ -2,10 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="format-detection" content="telephone=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>DOORS</title>
     <link rel="icon" type="image/svg+xml" href="images/logo.svg">
     <link rel="shortcut icon" type="image/svg+xml" href="images/logo.svg">
@@ -15,7 +13,7 @@
             src: url('fonts/Tiny5-Regular.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
-            font-display: block;
+            font-display: swap;
         }
 
         * {
@@ -24,75 +22,71 @@
             box-sizing: border-box;
         }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #fff;
+            background: white;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-            touch-action: none;
+            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
-            overscroll-behavior: none;
         }
 
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            height: -webkit-fill-available;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            contain: layout style paint;
+        }
+
+        .game-area {
+            position: relative;
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            contain: layout style paint;
+        }
+
+        .left-zone, .right-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .left-zone {
+            left: 0;
+        }
+
+        .right-zone {
+            right: 0;
+        }
+
+        .game-canvas {
+            width: 100vw;
+            height: 100vh;
+            height: -webkit-fill-available;
+            display: block;
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
-        }
-
-        #uiLayer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .score-counter {
-            position: absolute;
-            top: max(20px, env(safe-area-inset-top, 20px));
-            right: max(20px, env(safe-area-inset-right, 20px));
-            font-family: 'Tiny5', monospace;
-            color: #000;
-            text-align: right;
-            pointer-events: none;
-        }
-
-        .high-score, .current-score {
-            font-size: clamp(32px, 6vw, 50px);
-            line-height: 1.2;
-        }
-
-        .hs-number {
-            display: inline-block;
-        }
-
-        .hs-number.gold {
-            color: #FFD700;
-            animation: pop 0.2s ease-out;
-        }
-
-        @keyframes pop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.35); }
-            100% { transform: scale(1); }
+            -webkit-user-drag: none;
+            z-index: 5;
+            will-change: contents;
         }
 
         .try-again-overlay {
@@ -102,96 +96,188 @@
             width: 100%;
             height: 100%;
             background: rgba(255, 255, 255, 0.95);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
-            pointer-events: none;
+            z-index: 20;
+            contain: layout style paint;
         }
 
         .try-again-overlay.show {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
+            display: flex;
         }
 
         .try-again-text {
             color: #000;
             font-family: 'Tiny5', monospace;
             font-size: clamp(32px, 8vw, 50px);
+            font-weight: normal;
             cursor: pointer;
+            transition: opacity 0.2s ease;
         }
 
         .try-again-text:active {
             opacity: 0.5;
         }
+
+        .score-counter {
+            position: absolute;
+            top: max(20px, env(safe-area-inset-top, 20px));
+            right: max(20px, env(safe-area-inset-right, 20px));
+            z-index: 15;
+            font-family: 'Tiny5', monospace;
+            color: #000;
+            text-align: right;
+            contain: layout style;
+        }
+
+        .high-score, .current-score {
+            font-size: clamp(32px, 6vw, 50px);
+        }
+
+        .hs-number {
+            display: inline-block;
+            transition: transform 0.15s ease-out, color 0.15s ease-out;
+        }
+
+        .hs-number.gold {
+            color: #FFD700;
+        }
+
+        .hs-number.pop {
+            transform: scale(1.35);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: white;
+            }
+        }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="uiLayer">
-        <div class="score-counter">
-            <div class="high-score">hs: <span class="hs-number" id="hsNumber">0</span></div>
-            <div class="current-score"><span id="currentScore">0</span></div>
-        </div>
-
-        <div class="try-again-overlay" id="tryAgainOverlay">
-            <div class="try-again-text" id="tryAgainBtn">try again</div>
+    <div class="game-container">
+        <div class="game-area">
+            <div class="left-zone" id="leftZone"></div>
+            <div class="right-zone" id="rightZone"></div>
+            <canvas class="game-canvas" id="gameCanvas"></canvas>
+            <div class="try-again-overlay" id="tryAgainOverlay">
+                <div class="try-again-text" id="tryAgainText">try again</div>
+            </div>
+            <div class="score-counter" id="scoreCounter">
+                <div class="high-score">
+                    <span class="score-label">hs:</span> <span class="hs-number" id="hsNumber">0</span>
+                </div>
+                <div class="current-score">
+                    <span class="score-value" id="currentScoreValue">0</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-    'use strict';
+    (function() {
+        'use strict';
 
-    // ============================================================
-    // GAME ENGINE - Professional HTML5 Game Architecture
-    // ============================================================
+        // ==================== AUDIO SYSTEM ====================
+        // Web Audio API for minimal latency
+        let audioContext = null;
+        const audioBuffers = new Map();
+        let audioUnlocked = false;
 
-    const Game = (function() {
-        // -------------------- CONFIGURATION --------------------
-        const CONFIG = {
-            MAX_DISPLAY_SIZE: 1000,
-            ANIMATION: {
-                FRAME_DURATION: 250,
-                LAST_FRAME_FAIL_DURATION: 500
+        const SOUNDS = {
+            fail: 'sounds/fail.wav',
+            click: 'sounds/click.wav',
+            success: 'sounds/success.wav'
+        };
+
+        function initAudioContext() {
+            if (audioContext) return audioContext;
+
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AudioContextClass();
+
+                // iOS Safari requires resume after user gesture
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            } catch (e) {
+                console.warn('Web Audio API not supported:', e);
             }
-        };
 
-        // -------------------- STATE --------------------
-        const state = {
-            // Core
-            isRunning: false,
-            lastTime: 0,
+            return audioContext;
+        }
 
-            // Game
-            phase: 'idle', // 'idle' | 'animating' | 'gameover'
-            score: 0,
-            highScore: 0,
+        async function loadAudioBuffer(url) {
+            if (!audioContext) return null;
 
-            // Animation
-            animationData: null,
-            animationStartTime: 0,
-            currentFrameIndex: -1,
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                return audioBuffer;
+            } catch (e) {
+                console.warn('Failed to load audio:', url, e);
+                return null;
+            }
+        }
 
-            // Input
-            pendingInput: null,
+        async function preloadAllSounds() {
+            initAudioContext();
+            if (!audioContext) return;
 
-            // Rendering
-            needsRender: true,
-            currentImageSrc: null
-        };
+            const loadPromises = Object.entries(SOUNDS).map(async ([key, url]) => {
+                const buffer = await loadAudioBuffer(url);
+                if (buffer) {
+                    audioBuffers.set(key, buffer);
+                }
+            });
 
-        // -------------------- RESOURCES --------------------
-        const resources = {
-            images: new Map(),
-            audioBuffers: new Map(),
-            audioContext: null,
-            audioUnlocked: false
-        };
+            await Promise.all(loadPromises);
+            console.log('Audio buffers loaded:', audioBuffers.size);
+        }
 
+        function playSound(soundKey) {
+            if (!audioContext || !audioBuffers.has(soundKey)) return;
+
+            try {
+                // Resume context if suspended (iOS requirement)
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffers.get(soundKey);
+                source.connect(audioContext.destination);
+                source.start(0);
+            } catch (e) {
+                console.warn('Sound play error:', e);
+            }
+        }
+
+        // Unlock audio on first user interaction (required for iOS)
+        function unlockAudio() {
+            if (audioUnlocked) return;
+
+            initAudioContext();
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            // Play silent buffer to unlock
+            if (audioContext) {
+                const buffer = audioContext.createBuffer(1, 1, 22050);
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioContext.destination);
+                source.start(0);
+            }
+
+            audioUnlocked = true;
+        }
+
+        // ==================== IMAGE SYSTEM ====================
         const IMAGES = {
             static: 'images/static_image.svg',
             left: {
@@ -204,120 +290,12 @@
             }
         };
 
-        const SOUNDS = ['click', 'success', 'fail'];
+        const imageCache = new Map();
+        let imagesLoadedCount = 0;
+        let totalUniqueImages = 0;
 
-        // -------------------- CANVAS --------------------
-        let canvas, ctx;
-        let canvasWidth = 0, canvasHeight = 0;
-        let dpr = 1;
-
-        // Offscreen buffer for double buffering
-        let offscreen, offCtx;
-
-        // Pre-rendered image bitmaps for instant drawing
-        const bitmapCache = new Map();
-
-        // Image draw cache
-        const drawCache = { src: null, x: 0, y: 0, w: 0, h: 0 };
-
-        // -------------------- DOM --------------------
-        let dom = {};
-
-        // -------------------- AUDIO SYSTEM --------------------
-        function initAudio() {
-            if (resources.audioContext) return;
-
-            try {
-                const AC = window.AudioContext || window.webkitAudioContext;
-                resources.audioContext = new AC({ latencyHint: 'interactive' });
-            } catch (e) {
-                console.warn('Web Audio not supported');
-            }
-        }
-
-        async function loadSound(name) {
-            if (!resources.audioContext) return;
-
-            try {
-                const response = await fetch(`sounds/${name}.wav`);
-                const buffer = await response.arrayBuffer();
-                const audioBuffer = await resources.audioContext.decodeAudioData(buffer);
-                resources.audioBuffers.set(name, audioBuffer);
-            } catch (e) {
-                console.warn(`Failed to load sound: ${name}`, e);
-            }
-        }
-
-        async function loadAllSounds() {
-            initAudio();
-            if (!resources.audioContext) return;
-            await Promise.all(SOUNDS.map(loadSound));
-        }
-
-        function unlockAudio() {
-            if (resources.audioUnlocked || !resources.audioContext) return;
-
-            const ctx = resources.audioContext;
-
-            if (ctx.state === 'suspended') {
-                ctx.resume();
-            }
-
-            // Play silent buffer to unlock iOS
-            const buffer = ctx.createBuffer(1, 1, 22050);
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(ctx.destination);
-            source.start(0);
-
-            resources.audioUnlocked = true;
-        }
-
-        function playSound(name) {
-            const ctx = resources.audioContext;
-            const buffer = resources.audioBuffers.get(name);
-
-            if (!ctx || !buffer) return;
-
-            if (ctx.state === 'suspended') {
-                ctx.resume();
-            }
-
-            const source = ctx.createBufferSource();
-            source.buffer = buffer;
-            source.connect(ctx.destination);
-            source.start(0);
-        }
-
-        // -------------------- IMAGE LOADING --------------------
-        async function loadImage(src) {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.onload = async () => {
-                    resources.images.set(src, img);
-
-                    // Create ImageBitmap for faster rendering (if supported)
-                    if (typeof createImageBitmap === 'function') {
-                        try {
-                            const bitmap = await createImageBitmap(img);
-                            bitmapCache.set(src, bitmap);
-                        } catch (e) {
-                            // Fallback to regular image
-                        }
-                    }
-
-                    resolve(img);
-                };
-                img.onerror = () => {
-                    console.error('Failed to load:', src);
-                    resolve(null);
-                };
-                img.src = src;
-            });
-        }
-
-        async function loadAllImages() {
-            const allSrcs = [
+        function preloadImages() {
+            const allImages = [
                 IMAGES.static,
                 ...IMAGES.left.positive,
                 ...IMAGES.left.negative,
@@ -325,401 +303,380 @@
                 ...IMAGES.right.negative
             ];
 
-            const unique = [...new Set(allSrcs)];
-            await Promise.all(unique.map(loadImage));
+            const uniqueImages = [...new Set(allImages)];
+            totalUniqueImages = uniqueImages.length;
+
+            return Promise.all(uniqueImages.map(src => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        imageCache.set(src, img);
+                        imagesLoadedCount++;
+                        resolve(img);
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load:', src);
+                        imagesLoadedCount++;
+                        resolve(null);
+                    };
+                    img.src = src;
+                });
+            }));
         }
 
-        // -------------------- CANVAS SETUP --------------------
-        function setupCanvas() {
-            canvas = document.getElementById('gameCanvas');
+        // ==================== CANVAS SYSTEM ====================
+        let canvas, ctx;
+        let canvasWidth, canvasHeight;
+        let dpr = 1;
+        let lastDrawnImage = null;
 
-            // Request low-latency context
+        // Pre-calculated draw dimensions cache
+        let drawCache = {
+            width: 0,
+            height: 0,
+            x: 0,
+            y: 0,
+            imgSrc: null
+        };
+
+        const MAX_DISPLAY_SIZE = 1000;
+
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d', {
-                alpha: false,
-                desynchronized: true
+                alpha: false,  // Opaque canvas - better performance
+                desynchronized: true  // Reduce latency on supported browsers
             });
 
-            // Create offscreen buffer
-            offscreen = document.createElement('canvas');
-            offCtx = offscreen.getContext('2d', { alpha: false });
+            // Disable image smoothing once
+            ctx.imageSmoothingEnabled = false;
 
             resizeCanvas();
-
-            // Debounced resize handler
-            let resizeTimeout;
-            window.addEventListener('resize', () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(resizeCanvas, 100);
-            });
+            window.addEventListener('resize', debounce(resizeCanvas, 100));
         }
 
         function resizeCanvas() {
             canvasWidth = window.innerWidth;
             canvasHeight = window.innerHeight;
-            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
 
-            const w = canvasWidth * dpr;
-            const h = canvasHeight * dpr;
-
-            // Main canvas
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
             canvas.style.width = canvasWidth + 'px';
             canvas.style.height = canvasHeight + 'px';
 
-            // Offscreen buffer
-            offscreen.width = w;
-            offscreen.height = h;
-
-            // Scale contexts
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            // Disable smoothing
+            ctx.scale(dpr, dpr);
             ctx.imageSmoothingEnabled = false;
-            offCtx.imageSmoothingEnabled = false;
 
-            // Invalidate cache and request redraw
-            drawCache.src = null;
-            state.needsRender = true;
+            // Invalidate draw cache
+            drawCache.imgSrc = null;
+
+            // Redraw current image if exists
+            if (lastDrawnImage) {
+                drawImage(lastDrawnImage);
+            }
         }
 
-        // -------------------- RENDERING --------------------
-        function calculateImageBounds(img) {
-            const imgRatio = img.width / img.height;
-            const canvasRatio = canvasWidth / canvasHeight;
+        function calculateDrawDimensions(img) {
+            const imgAspect = img.width / img.height;
+            const canvasAspect = canvasWidth / canvasHeight;
 
-            let w, h;
+            let drawWidth, drawHeight;
 
-            if (imgRatio > canvasRatio) {
-                w = canvasWidth;
-                h = canvasWidth / imgRatio;
+            if (imgAspect > canvasAspect) {
+                drawWidth = canvasWidth;
+                drawHeight = canvasWidth / imgAspect;
             } else {
-                h = canvasHeight;
-                w = canvasHeight * imgRatio;
+                drawHeight = canvasHeight;
+                drawWidth = canvasHeight * imgAspect;
             }
 
-            // Cap size
-            const maxSize = CONFIG.MAX_DISPLAY_SIZE;
-            if (w > maxSize) {
-                w = maxSize;
-                h = w / imgRatio;
+            // Apply max size constraint
+            if (drawWidth > MAX_DISPLAY_SIZE) {
+                drawWidth = MAX_DISPLAY_SIZE;
+                drawHeight = MAX_DISPLAY_SIZE / imgAspect;
             }
-            if (h > maxSize) {
-                h = maxSize;
-                w = h * imgRatio;
+            if (drawHeight > MAX_DISPLAY_SIZE) {
+                drawHeight = MAX_DISPLAY_SIZE;
+                drawWidth = MAX_DISPLAY_SIZE * imgAspect;
             }
 
             return {
-                x: (canvasWidth - w) / 2,
-                y: (canvasHeight - h) / 2,
-                w: w,
-                h: h
+                width: drawWidth,
+                height: drawHeight,
+                x: (canvasWidth - drawWidth) / 2,
+                y: (canvasHeight - drawHeight) / 2
             };
         }
 
-        function renderFrame() {
-            if (!state.needsRender || !state.currentImageSrc) return;
+        function drawImage(src) {
+            const img = imageCache.get(src);
+            if (!img) return;
 
-            const src = state.currentImageSrc;
+            lastDrawnImage = src;
 
-            // Use ImageBitmap if available, otherwise use regular Image
-            const drawable = bitmapCache.get(src) || resources.images.get(src);
-            if (!drawable) return;
-
-            // Update draw cache if image changed
-            if (drawCache.src !== src) {
-                const img = resources.images.get(src);
-                if (img) {
-                    const bounds = calculateImageBounds(img);
-                    drawCache.src = src;
-                    drawCache.x = bounds.x;
-                    drawCache.y = bounds.y;
-                    drawCache.w = bounds.w;
-                    drawCache.h = bounds.h;
-                }
+            // Use cached dimensions if same image and canvas size unchanged
+            if (drawCache.imgSrc !== src) {
+                const dims = calculateDrawDimensions(img);
+                drawCache.width = dims.width;
+                drawCache.height = dims.height;
+                drawCache.x = dims.x;
+                drawCache.y = dims.y;
+                drawCache.imgSrc = src;
             }
 
-            // Render to offscreen buffer
-            offCtx.fillStyle = '#ffffff';
-            offCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-            offCtx.drawImage(drawable, drawCache.x, drawCache.y, drawCache.w, drawCache.h);
+            // Clear with white (since alpha: false)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-            // Flip: copy to main canvas (double buffering eliminates tearing)
-            ctx.drawImage(offscreen, 0, 0);
-
-            state.needsRender = false;
+            ctx.drawImage(img, drawCache.x, drawCache.y, drawCache.width, drawCache.height);
         }
 
-        function setImage(src) {
-            if (state.currentImageSrc !== src) {
-                state.currentImageSrc = src;
-                drawCache.src = null; // Force bounds recalculation
-                state.needsRender = true;
-            }
+        // ==================== GAME STATE ====================
+        const gameState = {
+            isAnimating: false,
+            isNegativeResult: false,
+            currentScore: 0,
+            highScore: 0,
+            animationId: null
+        };
+
+        // DOM element references
+        let tryAgainOverlay, hsNumber, currentScoreValue;
+
+        // ==================== GAME LOGIC ====================
+        function getRandomResult() {
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return (array[0] & 1) === 0; // Faster than modulo
         }
 
-        // -------------------- GAME LOGIC --------------------
-        function getRandomBool() {
-            const arr = new Uint32Array(1);
-            crypto.getRandomValues(arr);
-            return (arr[0] & 1) === 0;
+        function showTryAgain() {
+            tryAgainOverlay.classList.add('show');
         }
 
-        function startAnimation(side, isPositive) {
-            const frames = isPositive ? IMAGES[side].positive : IMAGES[side].negative;
-
-            state.phase = 'animating';
-            state.animationData = {
-                frames: frames,
-                isNegative: !isPositive,
-                soundPlayed: false
-            };
-            state.animationStartTime = performance.now();
-            state.currentFrameIndex = -1;
+        function hideTryAgain() {
+            tryAgainOverlay.classList.remove('show');
         }
 
-        function updateAnimation(time) {
-            const anim = state.animationData;
-            if (!anim) return;
+        function updateScoreDisplay() {
+            currentScoreValue.textContent = gameState.currentScore;
+            hsNumber.textContent = gameState.highScore;
+        }
 
-            const elapsed = time - state.animationStartTime;
-            const frameCount = anim.frames.length;
+        function celebrateHighScore() {
+            hsNumber.classList.add('gold', 'pop');
+            setTimeout(() => {
+                hsNumber.classList.remove('gold', 'pop');
+            }, 200);
+        }
 
-            // Calculate current frame based on elapsed time
-            let frameIndex = 0;
-            let accTime = 0;
+        function increaseScore() {
+            gameState.currentScore++;
+            currentScoreValue.textContent = gameState.currentScore;
 
-            for (let i = 0; i < frameCount; i++) {
-                const duration = (i === frameCount - 1 && anim.isNegative)
-                    ? CONFIG.ANIMATION.LAST_FRAME_FAIL_DURATION
-                    : CONFIG.ANIMATION.FRAME_DURATION;
-
-                if (elapsed < accTime + duration) {
-                    frameIndex = i;
-                    break;
-                }
-                accTime += duration;
-                if (i === frameCount - 1) {
-                    frameIndex = frameCount; // Animation finished
-                }
-            }
-
-            if (frameIndex < frameCount) {
-                // Update frame if changed
-                if (frameIndex !== state.currentFrameIndex) {
-                    state.currentFrameIndex = frameIndex;
-                    setImage(anim.frames[frameIndex]);
-
-                    // Play result sound on last frame
-                    if (frameIndex === frameCount - 1 && !anim.soundPlayed) {
-                        anim.soundPlayed = true;
-                        playSound(anim.isNegative ? 'fail' : 'success');
-                    }
-                }
-            } else {
-                // Animation complete
-                finishAnimation();
+            if (gameState.currentScore > gameState.highScore) {
+                gameState.highScore = gameState.currentScore;
+                hsNumber.textContent = gameState.highScore;
+                localStorage.setItem('doorsHighScore', String(gameState.highScore));
+                celebrateHighScore();
             }
         }
 
-        function finishAnimation() {
-            const wasNegative = state.animationData?.isNegative;
-
-            state.animationData = null;
-            state.currentFrameIndex = -1;
-
-            if (wasNegative) {
-                state.phase = 'gameover';
-                showGameOver();
-            } else {
-                incrementScore();
-                state.phase = 'idle';
-                setImage(IMAGES.static);
-            }
-        }
-
-        function incrementScore() {
-            state.score++;
-            dom.currentScore.textContent = state.score;
-
-            if (state.score > state.highScore) {
-                state.highScore = state.score;
-                dom.hsNumber.textContent = state.highScore;
-                localStorage.setItem('doorsHighScore', String(state.highScore));
-
-                // Trigger animation
-                dom.hsNumber.classList.remove('gold');
-                void dom.hsNumber.offsetWidth;
-                dom.hsNumber.classList.add('gold');
-            }
-        }
-
-        function resetScore() {
-            state.score = 0;
-            dom.currentScore.textContent = '0';
-        }
-
-        function showGameOver() {
-            dom.tryAgainOverlay.classList.add('show');
-        }
-
-        function hideGameOver() {
-            dom.tryAgainOverlay.classList.remove('show');
-        }
-
-        function restartGame() {
-            hideGameOver();
-            resetScore();
-            state.phase = 'idle';
-            setImage(IMAGES.static);
-        }
-
-        // -------------------- INPUT HANDLING --------------------
-        function processInput() {
-            const input = state.pendingInput;
-            if (!input) return;
-
-            state.pendingInput = null;
-
-            if (input.type === 'tap' && state.phase === 'idle') {
-                unlockAudio();
-                playSound('click');
-
-                const isPositive = getRandomBool();
-                startAnimation(input.side, isPositive);
-            } else if (input.type === 'restart' && state.phase === 'gameover') {
-                restartGame();
-            }
-        }
-
-        function handleTap(x) {
-            const side = x < canvasWidth / 2 ? 'left' : 'right';
-            state.pendingInput = { type: 'tap', side: side };
-        }
-
-        function handleRestart() {
-            state.pendingInput = { type: 'restart' };
-        }
-
-        function setupInput() {
-            // Touch input - passive: false to ensure immediate response
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                handleTap(touch.clientX);
-            }, { passive: false });
-
-            // Mouse fallback
-            canvas.addEventListener('click', (e) => {
-                handleTap(e.clientX);
-            });
-
-            // Try again button
-            dom.tryAgainBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleRestart();
-            }, { passive: false });
-
-            dom.tryAgainBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                handleRestart();
-            });
-
-            // Prevent context menu
-            document.addEventListener('contextmenu', e => e.preventDefault());
-
-            // Unlock audio on first touch
-            document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
-        }
-
-        // -------------------- GAME LOOP --------------------
-        function gameLoop(timestamp) {
-            if (!state.isRunning) return;
-
-            // Process input immediately
-            processInput();
-
-            // Update animation state
-            if (state.phase === 'animating') {
-                updateAnimation(timestamp);
-            }
-
-            // Render if needed
-            renderFrame();
-
-            // Schedule next frame
-            requestAnimationFrame(gameLoop);
-        }
-
-        function start() {
-            if (state.isRunning) return;
-
-            state.isRunning = true;
-            state.lastTime = performance.now();
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        // -------------------- INITIALIZATION --------------------
-        function cacheDom() {
-            dom.hsNumber = document.getElementById('hsNumber');
-            dom.currentScore = document.getElementById('currentScore');
-            dom.tryAgainOverlay = document.getElementById('tryAgainOverlay');
-            dom.tryAgainBtn = document.getElementById('tryAgainBtn');
+        function resetCurrentScore() {
+            gameState.currentScore = 0;
+            updateScoreDisplay();
         }
 
         function loadHighScore() {
             const saved = localStorage.getItem('doorsHighScore');
             if (saved) {
-                state.highScore = parseInt(saved, 10) || 0;
-                dom.hsNumber.textContent = state.highScore;
+                gameState.highScore = parseInt(saved, 10) || 0;
+                hsNumber.textContent = gameState.highScore;
             }
         }
 
+        function restartGame() {
+            hideTryAgain();
+            gameState.isNegativeResult = false;
+            resetCurrentScore();
+            drawImage(IMAGES.static);
+        }
+
+        // ==================== ANIMATION ====================
+        const FRAME_DURATION = 250;
+        const LAST_FRAME_NEGATIVE_DURATION = 500;
+
+        function playSequence(images, isNegative, callback) {
+            if (gameState.isAnimating) return;
+
+            gameState.isAnimating = true;
+            gameState.isNegativeResult = isNegative;
+
+            const startTime = performance.now();
+            const frameCount = images.length;
+            let soundPlayed = false;
+            let lastFrameIndex = -1;
+
+            function animate(currentTime) {
+                if (!gameState.isAnimating) return;
+
+                const elapsed = currentTime - startTime;
+
+                // Calculate current frame
+                let frameIndex = 0;
+                let accTime = 0;
+
+                for (let i = 0; i < frameCount; i++) {
+                    const duration = (i === frameCount - 1 && isNegative)
+                        ? LAST_FRAME_NEGATIVE_DURATION
+                        : FRAME_DURATION;
+
+                    if (elapsed < accTime + duration) {
+                        frameIndex = i;
+                        break;
+                    }
+                    accTime += duration;
+                    if (i === frameCount - 1) {
+                        frameIndex = frameCount; // Animation complete
+                    }
+                }
+
+                if (frameIndex < frameCount) {
+                    // Only redraw if frame changed
+                    if (frameIndex !== lastFrameIndex) {
+                        lastFrameIndex = frameIndex;
+                        const currentImage = images[frameIndex];
+                        drawImage(currentImage);
+
+                        // Play sound on last frame
+                        if (!soundPlayed && frameIndex === frameCount - 1) {
+                            soundPlayed = true;
+                            playSound(isNegative ? 'fail' : 'success');
+                        }
+                    }
+
+                    gameState.animationId = requestAnimationFrame(animate);
+                } else {
+                    // Animation complete
+                    gameState.isAnimating = false;
+                    gameState.animationId = null;
+                    if (callback) callback();
+                }
+            }
+
+            gameState.animationId = requestAnimationFrame(animate);
+        }
+
+        function handleZoneClick(side) {
+            if (gameState.isAnimating) return;
+
+            // Unlock audio and play click sound immediately
+            unlockAudio();
+            playSound('click');
+
+            hideTryAgain();
+
+            const isPositive = getRandomResult();
+            const images = isPositive ? IMAGES[side].positive : IMAGES[side].negative;
+
+            playSequence(images, !isPositive, () => {
+                if (gameState.isNegativeResult) {
+                    showTryAgain();
+                } else {
+                    increaseScore();
+                    drawImage(IMAGES.static);
+                }
+            });
+        }
+
+        // ==================== EVENT HANDLERS ====================
+        function setupEventListeners() {
+            const leftZone = document.getElementById('leftZone');
+            const rightZone = document.getElementById('rightZone');
+
+            // Use passive: false for touchstart to ensure we can preventDefault
+            const touchOptions = { passive: false };
+
+            leftZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('left');
+            }, touchOptions);
+
+            rightZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleZoneClick('right');
+            }, touchOptions);
+
+            // Mouse fallback for testing
+            leftZone.addEventListener('click', () => handleZoneClick('left'));
+            rightZone.addEventListener('click', () => handleZoneClick('right'));
+
+            // Try again handlers
+            tryAgainOverlay.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                restartGame();
+            }, touchOptions);
+
+            tryAgainOverlay.addEventListener('click', restartGame);
+
+            // Prevent context menu
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // Initial audio unlock on any touch
+            document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+        }
+
+        // ==================== UTILITIES ====================
+        function debounce(fn, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        // ==================== TELEGRAM INTEGRATION ====================
         function initTelegram() {
-            if (window.Telegram?.WebApp) {
+            if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready();
                 tg.expand();
                 tg.enableClosingConfirmation();
+
+                window.addEventListener('resize', debounce(() => tg.expand(), 100));
             }
         }
 
-        async function init() {
-            cacheDom();
-            setupCanvas();
-            setupInput();
+        // ==================== INITIALIZATION ====================
+        async function initGame() {
+            // Cache DOM elements
+            tryAgainOverlay = document.getElementById('tryAgainOverlay');
+            hsNumber = document.getElementById('hsNumber');
+            currentScoreValue = document.getElementById('currentScoreValue');
+
+            initCanvas();
             loadHighScore();
+            setupEventListeners();
             initTelegram();
 
-            // Load resources in parallel
+            // Load assets in parallel
             await Promise.all([
-                loadAllImages(),
-                loadAllSounds()
+                preloadImages(),
+                preloadAllSounds()
             ]);
 
-            console.log('Game ready. Images:', resources.images.size,
-                        'Bitmaps:', bitmapCache.size,
-                        'Sounds:', resources.audioBuffers.size);
-
-            // Set initial state and start game loop
-            setImage(IMAGES.static);
-            state.phase = 'idle';
-            start();
+            console.log('Game ready! Images:', imagesLoadedCount, 'Audio buffers:', audioBuffers.size);
+            drawImage(IMAGES.static);
         }
 
-        // -------------------- PUBLIC API --------------------
-        return { init };
+        // Start game when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGame);
+        } else {
+            initGame();
+        }
     })();
-
-    // Start game when DOM ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', Game.init);
-    } else {
-        Game.init();
-    }
     </script>
 </body>
 </html>
